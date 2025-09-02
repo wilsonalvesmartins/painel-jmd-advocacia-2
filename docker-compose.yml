@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Serviço do Frontend (Nginx)
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jmd_webapp
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - api # O frontend depende da API
+    networks:
+      - jmd-network
+
+  # Serviço do Backend (API)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: jmd_api
+    restart: unless-stopped
+    depends_on:
+      - db # A API depende do banco de dados
+    environment:
+      # A URL de conexão será injetada pelo Coolify como uma variável de ambiente
+      - DATABASE_URL=${DATABASE_URL}
+    networks:
+      - jmd-network
+
+  # Serviço do Banco de Dados
+  db:
+    image: postgres:15-alpine
+    container_name: jmd_database
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: strongpassword123 # Troque por uma senha segura
+      POSTGRES_DB: jmd_processos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - jmd-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  jmd-network:
+    driver: bridge
+
