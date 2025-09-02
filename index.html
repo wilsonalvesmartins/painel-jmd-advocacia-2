@@ -8,282 +8,410 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background-color: #fefefe; padding: 24px; border: 1px solid #888; width: 90%; max-width: 550px; border-radius: 0.5rem; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 24px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 0.5rem;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body class="antialiased">
 
-    <!-- TELA DE LOGIN -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-100">
-        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-            <h2 class="text-2xl font-bold text-center text-gray-800">JMD Advocacia - Acesso</h2>
-            <form id="loginForm" class="space-y-6">
-                <div>
-                    <label for="username" class="text-sm font-medium text-gray-700">Usuário</label>
-                    <input id="username" name="username" type="text" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="escritorio">
+    <!-- Tela de Login -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">JMD Advocacia - Acesso</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
                 </div>
-                <div>
-                    <label for="password" class="text-sm font-medium text-gray-700">Senha</label>
-                    <input id="password" name="password" type="password" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="36672456">
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
                 </div>
-                <p id="loginError" class="text-red-500 text-sm hidden">Usuário ou senha inválidos.</p>
-                <div>
-                    <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Entrar
-                    </button>
-                </div>
+                <p id="loginError" class="text-red-500 text-sm text-center mb-4 hidden">Usuário ou senha inválidos.</p>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 transition-colors shadow">Entrar</button>
             </form>
         </div>
     </div>
 
-    <!-- APLICAÇÃO PRINCIPAL (INICIALMENTE OCULTA) -->
+    <!-- Painel Principal (Inicialmente Oculto) -->
     <div id="app" class="p-4 sm:p-6 lg:p-8 hidden">
-        <header class="mb-8 max-w-7xl mx-auto">
-             <div class="flex flex-wrap items-center justify-between gap-4">
-                <h1 class="text-3xl font-bold text-gray-800">Painel de Processos - JMD Advocacia</h1>
-                <button id="addProcessBtn" class="bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 shadow flex items-center gap-2">
-                    <i class="fa fa-plus"></i> <span>Novo Processo</span>
-                </button>
+        <header class="mb-8">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">JMD Advocacia</h1>
+                        <h2 class="text-xl font-semibold text-gray-600">Painel de Acompanhamento Processual</h2>
+                    </div>
+                    <button id="logoutBtn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors shadow flex items-center gap-2">
+                        <i class="fa fa-sign-out-alt"></i>
+                        <span>Sair</span>
+                    </button>
+                </div>
+                <div class="w-full h-px bg-gray-200 mt-4"></div>
             </div>
-             <div class="w-full h-px bg-gray-200 mt-4"></div>
         </header>
 
         <main class="max-w-7xl mx-auto">
-            <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
-                <input id="searchInput" type="text" placeholder="Buscar por nº do processo ou nome do cliente..." class="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-md">
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="relative w-full sm:w-auto flex-grow sm:flex-grow-0 sm:max-w-xs">
+                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="searchInput" type="text" placeholder="Buscar por nº do processo ou nome do cliente..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <button id="addProcessBtn" class="bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 transition-colors shadow flex items-center gap-2">
+                    <i class="fa fa-plus"></i>
+                    <span>Novo Processo</span>
+                </button>
             </div>
 
             <div id="processList" class="space-y-4">
                 <!-- Cards de processo serão inseridos aqui -->
             </div>
-            <div id="loading-processes" class="text-center py-10"><p class="text-gray-500">Carregando processos...</p></div>
-            <div id="no-results" class="hidden text-center py-10"><p class="text-gray-500 text-lg">Nenhum processo encontrado.</p></div>
+            <div id="loading-state" class="text-center py-10">
+                <p class="text-gray-500 text-lg">Carregando processos...</p>
+            </div>
+            <div id="error-state" class="hidden text-center py-10 bg-red-50 border border-red-200 rounded-lg">
+                <p id="errorMessage" class="text-red-600 font-semibold text-lg">Falha ao carregar processos. Verifique se a API está funcionando corretamente.</p>
+            </div>
+            <div id="no-results" class="hidden text-center py-10">
+                <p class="text-gray-500 text-lg">Nenhum processo encontrado.</p>
+            </div>
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="processModal" class="modal"><div class="modal-content animate-fade-in"><form id="processForm"><h3 id="modalTitle" class="text-2xl font-bold mb-6"></h3><input type="hidden" id="processId"><div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2 no-scrollbar"><div><label for="numeroProcesso">Número do Processo</label><input type="text" id="numeroProcesso" class="w-full mt-1 border-gray-300 rounded-md" required></div><div><label for="nomeCliente">Nome do Cliente</label><input type="text" id="nomeCliente" class="w-full mt-1 border-gray-300 rounded-md" required></div><div><label for="tipoAcao">Tipo de Ação</label><select id="tipoAcao" class="w-full mt-1 border-gray-300 rounded-md"><option>Cível</option><option>Trabalhista</option><option>Família</option><option>Outros</option></select></div><div><label for="linkPainel">Link do Painel</label><input type="url" id="linkPainel" placeholder="https://..." class="w-full mt-1 border-gray-300 rounded-md"></div><div><label for="situacao">Situação</label><select id="situacao" class="w-full mt-1 border-gray-300 rounded-md"><option>Aguardando Inicial</option><option>Em Andamento</option><option>Em Execução</option><option>Aguardando Recurso</option><option>Concluído</option><option>Suspenso</option></select></div><div><label for="proximaAudiencia">Próxima Audiência</label><input type="date" id="proximaAudiencia" class="w-full mt-1 border-gray-300 rounded-md"></div><div><label for="observacao">Observação Geral</label><textarea id="observacao" rows="3" class="w-full mt-1 border-gray-300 rounded-md"></textarea></div></div><div class="mt-8 flex justify-end gap-3"><button type="button" class="cancelBtn bg-gray-200 px-4 py-2 rounded-md">Cancelar</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Salvar</button></div></form></div></div>
-    <div id="movimentacoesModal" class="modal"><div class="modal-content animate-fade-in"><h3 class="text-2xl font-bold mb-2">Histórico de Movimentações</h3><p id="movProcessoNumero" class="text-gray-500 mb-6"></p><div id="movimentacoesList" class="space-y-3 mb-6 max-h-48 overflow-y-auto pr-2 no-scrollbar border-t border-b py-4"></div><form id="movimentacaoForm"><input type="hidden" id="movProcessoId"><div><label for="novaMovimentacao">Adicionar Nova Movimentação</label><textarea id="novaMovimentacao" rows="3" class="w-full mt-1 border-gray-300 rounded-md" required></textarea></div><div class="mt-6 flex justify-between items-center gap-3"><button type="button" class="cancelBtn bg-gray-200 px-4 py-2 rounded-md">Fechar</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Adicionar</button></div></form></div></div>
+    <!-- Modal para Adicionar/Editar Processo -->
+    <div id="processModal" class="modal">
+        <div class="modal-content animate-fade-in">
+            <form id="processForm">
+                <h3 id="modalTitle" class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Processo</h3>
+                <input type="hidden" id="processId">
+                <div class="space-y-4">
+                    <div>
+                        <label for="numeroProcesso" class="block text-sm font-medium text-gray-700 mb-1">Número do Processo</label>
+                        <input type="text" id="numeroProcesso" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div>
+                        <label for="nomeCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+                        <input type="text" id="nomeCliente" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition">Salvar Processo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Movimentação -->
+    <div id="movimentacaoModal" class="modal">
+        <div class="modal-content animate-fade-in">
+            <form id="movimentacaoForm">
+                <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Movimentação</h3>
+                <input type="hidden" id="movimentacaoProcessId">
+                <div>
+                    <label for="movimentacaoDescricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição da Movimentação</label>
+                    <textarea id="movimentacaoDescricao" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" id="cancelMovimentacaoBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- ELEMENTOS GLOBAIS ---
-    const loginScreen = document.getElementById('loginScreen');
+    // --- ELEMENTOS DA UI ---
+    const loginScreen = document.getElementById('login-screen');
     const appScreen = document.getElementById('app');
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
     
-    let allProcesses = [];
-    const processList = document.getElementById('processList');
-    const searchInput = document.getElementById('searchInput');
-    const loadingDiv = document.getElementById('loading-processes');
-    const noResultsDiv = document.getElementById('no-results');
-
+    const addProcessBtn = document.getElementById('addProcessBtn');
     const processModal = document.getElementById('processModal');
     const processForm = document.getElementById('processForm');
+    const processList = document.getElementById('processList');
     const modalTitle = document.getElementById('modalTitle');
-    const processIdInput = document.getElementById('processId');
+    const cancelBtn = document.getElementById('cancelBtn');
     
-    const movimentacoesModal = document.getElementById('movimentacoesModal');
+    const movimentacaoModal = document.getElementById('movimentacaoModal');
     const movimentacaoForm = document.getElementById('movimentacaoForm');
-    const movProcessoIdInput = document.getElementById('movProcessoId');
-    const movProcessoNumero = document.getElementById('movProcessoNumero');
-    const movimentacoesList = document.getElementById('movimentacoesList');
+    const cancelMovimentacaoBtn = document.getElementById('cancelMovimentacaoBtn');
 
-    const statusColors = {"Aguardando Inicial":"bg-yellow-100 text-yellow-800","Em Andamento":"bg-blue-100 text-blue-800","Em Execução":"bg-green-100 text-green-800","Aguardando Recurso":"bg-purple-100 text-purple-800","Concluído":"bg-gray-200 text-gray-800","Suspenso":"bg-red-100 text-red-800"};
+    const searchInput = document.getElementById('searchInput');
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const noResults = document.getElementById('no-results');
 
-    // --- LÓGICA DE LOGIN ---
+    let allProcesses = [];
+
+    // --- LÓGICA DE AUTENTICAÇÃO ---
+    const checkLogin = () => {
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            fetchProcesses();
+        } else {
+            loginScreen.classList.remove('hidden');
+            appScreen.classList.add('hidden');
+        }
+    };
+
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
         if (username === 'escritorio' && password === '36672456') {
+            sessionStorage.setItem('loggedIn', 'true');
             loginError.classList.add('hidden');
-            loginScreen.classList.add('hidden');
-            appScreen.classList.remove('hidden');
-            initializeApp(); // Inicia o aplicativo principal
+            checkLogin();
         } else {
             loginError.classList.remove('hidden');
         }
     });
 
+    logoutBtn.addEventListener('click', () => {
+        sessionStorage.removeItem('loggedIn');
+        checkLogin();
+    });
+
     // --- FUNÇÕES DA API ---
-    const api = {
-        getProcesses: () => fetch('/api/processes').then(res => res.json()),
-        createProcess: (data) => fetch('/api/processes', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        }).then(res => res.json()),
-        updateProcess: (id, data) => fetch(`/api/processes/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        }).then(res => res.json()),
-        addMovement: (id, text) => fetch(`/api/processes/${id}/movimentacoes`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ texto: text })
-        }).then(res => res.json())
+    const fetchProcesses = async () => {
+        showLoading();
+        try {
+            const response = await fetch('/api/processes');
+            if (!response.ok) {
+                throw new Error('Falha na rede ou na API');
+            }
+            allProcesses = await response.json();
+            renderProcesses();
+        } catch (error) {
+            console.error('Erro ao buscar processos:', error);
+            showError();
+        }
     };
 
-    // --- RENDERIZAÇÃO ---
-    function renderProcesses(processesToRender = allProcesses) {
-        processList.innerHTML = '';
-        loadingDiv.style.display = 'none';
+    const saveProcess = async (processData) => {
+        try {
+            const response = await fetch('/api/processes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(processData),
+            });
+            if (!response.ok) throw new Error('Falha ao salvar processo');
+            await fetchProcesses();
+            closeProcessModal();
+        } catch (error) {
+            console.error('Erro ao salvar processo:', error);
+            alert('Não foi possível salvar o processo. Tente novamente.');
+        }
+    };
 
+    const addMovement = async (processId, description) => {
+        try {
+            const response = await fetch(`/api/processes/${processId}/movimentacoes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description }),
+            });
+            if (!response.ok) throw new Error('Falha ao adicionar movimentação');
+            await fetchProcesses();
+            closeMovimentacaoModal();
+        } catch (error) {
+            console.error('Erro ao adicionar movimentação:', error);
+            alert('Não foi possível adicionar a movimentação. Tente novamente.');
+        }
+    };
+
+    // --- RENDERIZAÇÃO E UI ---
+    const showLoading = () => {
+        loadingState.classList.remove('hidden');
+        errorState.classList.add('hidden');
+        noResults.classList.add('hidden');
+        processList.classList.add('hidden');
+    };
+    
+    const showError = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.remove('hidden');
+        noResults.classList.add('hidden');
+        processList.classList.add('hidden');
+    };
+    
+    const showNoResults = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        noResults.classList.remove('hidden');
+        processList.classList.add('hidden');
+    };
+
+    const showContent = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        noResults.classList.add('hidden');
+        processList.classList.remove('hidden');
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const renderProcesses = () => {
+        processList.innerHTML = '';
         const searchTerm = searchInput.value.toLowerCase();
-        const filteredProcesses = processesToRender.filter(p => 
-            p.numero.toLowerCase().includes(searchTerm) || 
+        
+        const filteredProcesses = allProcesses.filter(p => 
+            p.numero.toLowerCase().includes(searchTerm) ||
             p.cliente.toLowerCase().includes(searchTerm)
         );
 
-        noResultsDiv.style.display = filteredProcesses.length === 0 ? 'block' : 'none';
+        if (allProcesses.length > 0 && filteredProcesses.length === 0) {
+            showNoResults();
+        } else if (filteredProcesses.length > 0) {
+            showContent();
+        } else {
+             // Se não há processos no total, a mensagem de "nenhum processo" é diferente
+            noResults.innerHTML = '<p class="text-gray-500 text-lg">Ainda não há processos cadastrados. Clique em "Novo Processo" para começar.</p>';
+            showNoResults();
+        }
+
+        filteredProcesses.sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated));
 
         filteredProcesses.forEach(p => {
-            const lastMov = p.movimentacoes && p.movimentacoes.length > 0 ? p.movimentacoes[p.movimentacoes.length - 1] : { texto: 'Nenhuma movimentação registrada.', data: null };
+            const lastMovement = p.movimentacoes && p.movimentacoes.length > 0 
+                ? p.movimentacoes[p.movimentacoes.length - 1]
+                : { timestamp: p.created_at, description: 'Processo criado' };
+
+            let movementsHtml = 'Nenhuma movimentação registrada.';
+            if (p.movimentacoes && p.movimentacoes.length > 0) {
+                movementsHtml = `<ul class="space-y-2 list-disc list-inside text-gray-600">` +
+                    p.movimentacoes.slice().reverse().map(m => 
+                        `<li><span class="font-semibold text-gray-800">${formatDate(m.timestamp)}:</span> ${m.description}</li>`
+                    ).join('') + `</ul>`;
+            }
+
             const card = `
                 <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500 transition hover:shadow-lg">
-                    <div class="flex justify-between items-start gap-4">
+                    <div class="flex flex-wrap justify-between items-start gap-4">
                         <div class="flex-grow">
-                            <span class="text-sm font-semibold py-1 px-3 rounded-full ${statusColors[p.situacao] || ''}">${p.situacao}</span>
-                            <h3 class="text-xl font-bold text-gray-800 mt-2">${p.numero}</h3>
-                            <p class="text-gray-700 font-medium">${p.cliente}</p>
+                            <h3 class="text-xl font-bold text-gray-800">${p.numero}</h3>
+                            <p class="text-md font-semibold text-gray-700">${p.cliente}</p>
+                            <p class="text-sm text-gray-500 mt-1">Última atualização: ${formatDate(lastMovement.timestamp)}</p>
                         </div>
                         <div class="flex-shrink-0">
-                            <button class="edit-btn text-blue-600 hover:text-blue-800 h-9 w-9 grid place-content-center rounded-full hover:bg-gray-100" data-id="${p.id}" title="Editar Processo"><i class="fa fa-pencil-alt"></i></button>
+                             <button class="add-movimentacao-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600 transition-colors text-sm" data-id="${p.id}">+ Movimentação</button>
                         </div>
                     </div>
-                    <div class="mt-4 pt-4 border-t">
-                        <p class="text-sm font-medium text-gray-500">Última Movimentação:</p>
-                        <p class="text-gray-800">${lastMov.texto}</p>
-                        <small class="text-gray-500">${lastMov.data ? new Date(lastMov.data).toLocaleString('pt-BR') : ''}</small>
-                    </div>
-                    <div class="mt-4">
-                        <button class="movimentacoes-btn w-full bg-gray-100 p-2 rounded-md hover:bg-gray-200 transition" data-id="${p.id}">
-                            Ver Histórico de Movimentações (${p.movimentacoes?.length || 0})
-                        </button>
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações:</p>
+                        ${movementsHtml}
                     </div>
                 </div>
             `;
             processList.innerHTML += card;
         });
-    }
+    };
 
-    async function loadProcesses() {
-        try {
-            loadingDiv.style.display = 'block';
-            noResultsDiv.style.display = 'none';
-            processList.innerHTML = '';
-            
-            const processes = await api.getProcesses();
-            if(!Array.isArray(processes)) { // Checagem de erro da API
-                throw new Error("A API não retornou uma lista de processos.");
-            }
-            allProcesses = processes;
-            renderProcesses();
-        } catch (error) {
-            console.error('Erro ao carregar processos:', error);
-            loadingDiv.innerHTML = '<p class="text-red-500">Falha ao carregar processos. Verifique se a API está funcionando corretamente.</p>';
-        }
-    }
-
-    // --- MODALS E FORMULÁRIOS ---
-    const openModal = (modal) => modal.style.display = 'flex';
-    const closeModal = (modal) => modal.style.display = 'none';
-
-    document.getElementById('addProcessBtn').addEventListener('click', () => {
+    // --- MODAIS ---
+    const openProcessModal = () => {
         processForm.reset();
-        processIdInput.value = '';
         modalTitle.textContent = 'Adicionar Novo Processo';
-        openModal(processModal);
+        processModal.style.display = 'flex';
+    };
+    const closeProcessModal = () => processModal.style.display = 'none';
+
+    const openMovimentacaoModal = (processId) => {
+        movimentacaoForm.reset();
+        document.getElementById('movimentacaoProcessId').value = processId;
+        movimentacaoModal.style.display = 'flex';
+    };
+    const closeMovimentacaoModal = () => movimentacaoModal.style.display = 'none';
+
+    // --- EVENT LISTENERS ---
+    addProcessBtn.addEventListener('click', openProcessModal);
+    cancelBtn.addEventListener('click', closeProcessModal);
+    cancelMovimentacaoBtn.addEventListener('click', closeMovimentacaoModal);
+
+    window.addEventListener('click', (e) => {
+        if (e.target == processModal) closeProcessModal();
+        if (e.target == movimentacaoModal) closeMovimentacaoModal();
+    });
+    
+    searchInput.addEventListener('input', renderProcesses);
+
+    processForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const processData = {
+            numero: document.getElementById('numeroProcesso').value,
+            cliente: document.getElementById('nomeCliente').value,
+        };
+        saveProcess(processData);
     });
 
-    document.querySelectorAll('.cancelBtn').forEach(btn => btn.addEventListener('click', () => {
-        closeModal(processModal);
-        closeModal(movimentacoesModal);
-    }));
-
-    processForm.addEventListener('submit', async (e) => {
+    movimentacaoForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const id = processIdInput.value;
-        const data = { numero: document.getElementById('numeroProcesso').value, cliente: document.getElementById('nomeCliente').value, acao: document.getElementById('tipoAcao').value, link: document.getElementById('linkPainel').value, situacao: document.getElementById('situacao').value, audiencia: document.getElementById('proximaAudiencia').value, obs: document.getElementById('observacao').value };
-        try {
-            id ? await api.updateProcess(id, data) : await api.createProcess(data);
-            closeModal(processModal);
-            loadProcesses();
-        } catch (error) { alert('Falha ao salvar o processo.'); }
+        const processId = document.getElementById('movimentacaoProcessId').value;
+        const description = document.getElementById('movimentacaoDescricao').value;
+        addMovement(processId, description);
     });
 
     processList.addEventListener('click', (e) => {
-        const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) {
-            const process = allProcesses.find(p => p.id == editBtn.dataset.id);
-            if (process) {
-                modalTitle.textContent = 'Editar Processo';
-                processIdInput.value = process.id;
-                document.getElementById('numeroProcesso').value = process.numero;
-                document.getElementById('nomeCliente').value = process.cliente;
-                document.getElementById('tipoAcao').value = process.acao;
-                document.getElementById('linkPainel').value = process.link;
-                document.getElementById('situacao').value = process.situacao;
-                document.getElementById('proximaAudiencia').value = process.audiencia ? new Date(process.audiencia).toISOString().split('T')[0] : '';
-                document.getElementById('observacao').value = process.obs;
-                openModal(processModal);
-            }
-        }
-
-        const movBtn = e.target.closest('.movimentacoes-btn');
-        if (movBtn) {
-            const process = allProcesses.find(p => p.id == movBtn.dataset.id);
-            if (process) {
-                movProcessoIdInput.value = process.id;
-                movProcessoNumero.textContent = `Processo: ${process.numero}`;
-                renderMovimentacoes(process.movimentacoes || []);
-                openModal(movimentacoesModal);
-            }
+        const addBtn = e.target.closest('.add-movimentacao-btn');
+        if (addBtn) {
+            const processId = addBtn.dataset.id;
+            openMovimentacaoModal(processId);
         }
     });
 
-    function renderMovimentacoes(movs) {
-        movimentacoesList.innerHTML = '';
-        if (movs.length === 0) {
-            movimentacoesList.innerHTML = '<p class="text-gray-500">Nenhuma movimentação registrada.</p>'; return;
-        }
-        [...movs].reverse().forEach(mov => {
-            movimentacoesList.innerHTML += `<div class="p-2 bg-gray-50 rounded"><p class="text-gray-800">${mov.texto}</p><small class="text-gray-500">${new Date(mov.data).toLocaleString('pt-BR')}</small></div>`;
-        });
-    }
-
-    movimentacaoForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = movProcessoIdInput.value;
-        const texto = document.getElementById('novaMovimentacao').value;
-        try {
-            const updatedProcess = await api.addMovement(id, texto);
-            const processIndex = allProcesses.findIndex(p => p.id == id);
-            allProcesses[processIndex] = updatedProcess;
-            renderMovimentacoes(updatedProcess.movimentacoes);
-            document.getElementById('novaMovimentacao').value = '';
-            renderProcesses();
-        } catch(error) { alert('Falha ao adicionar movimentação.'); }
-    });
-    
-    searchInput.addEventListener('input', () => renderProcesses());
-
-    // --- INICIALIZAÇÃO DA APP ---
-    function initializeApp() {
-        loadProcesses();
-    }
+    // --- INICIALIZAÇÃO ---
+    checkLogin();
 });
 </script>
+
 </body>
 </html>
 
