@@ -7,8 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: jmd_webapp
-    ports:
-      - "8080:80"
+    # A seção "ports" foi removida para evitar conflitos com o proxy do Coolify
     restart: unless-stopped
     depends_on:
       - api # O frontend depende da API
