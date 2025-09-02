@@ -19,8 +19,31 @@
 </head>
 <body class="antialiased">
 
-    <!-- APLICAÇÃO PRINCIPAL -->
-    <div id="app" class="p-4 sm:p-6 lg:p-8">
+    <!-- TELA DE LOGIN -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-100">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-center text-gray-800">JMD Advocacia - Acesso</h2>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="text-sm font-medium text-gray-700">Usuário</label>
+                    <input id="username" name="username" type="text" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="escritorio">
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-medium text-gray-700">Senha</label>
+                    <input id="password" name="password" type="password" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="36672456">
+                </div>
+                <p id="loginError" class="text-red-500 text-sm hidden">Usuário ou senha inválidos.</p>
+                <div>
+                    <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Entrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICAÇÃO PRINCIPAL (INICIALMENTE OCULTA) -->
+    <div id="app" class="p-4 sm:p-6 lg:p-8 hidden">
         <header class="mb-8 max-w-7xl mx-auto">
              <div class="flex flex-wrap items-center justify-between gap-4">
                 <h1 class="text-3xl font-bold text-gray-800">Painel de Processos - JMD Advocacia</h1>
@@ -50,6 +73,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTOS GLOBAIS ---
+    const loginScreen = document.getElementById('loginScreen');
+    const appScreen = document.getElementById('app');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    
     let allProcesses = [];
     const processList = document.getElementById('processList');
     const searchInput = document.getElementById('searchInput');
@@ -68,6 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const movimentacoesList = document.getElementById('movimentacoesList');
 
     const statusColors = {"Aguardando Inicial":"bg-yellow-100 text-yellow-800","Em Andamento":"bg-blue-100 text-blue-800","Em Execução":"bg-green-100 text-green-800","Aguardando Recurso":"bg-purple-100 text-purple-800","Concluído":"bg-gray-200 text-gray-800","Suspenso":"bg-red-100 text-red-800"};
+
+    // --- LÓGICA DE LOGIN ---
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        if (username === 'escritorio' && password === '36672456') {
+            loginError.classList.add('hidden');
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            initializeApp(); // Inicia o aplicativo principal
+        } else {
+            loginError.classList.remove('hidden');
+        }
+    });
 
     // --- FUNÇÕES DA API ---
     const api = {
@@ -100,32 +145,30 @@ document.addEventListener('DOMContentLoaded', () => {
             p.cliente.toLowerCase().includes(searchTerm)
         );
 
-        if (filteredProcesses.length === 0) {
-            noResultsDiv.style.display = 'block';
-        } else {
-            noResultsDiv.style.display = 'none';
-        }
+        noResultsDiv.style.display = filteredProcesses.length === 0 ? 'block' : 'none';
 
         filteredProcesses.forEach(p => {
-            const lastMov = p.movimentacoes && p.movimentacoes.length > 0 ? p.movimentacoes[p.movimentacoes.length - 1] : { texto: 'Nenhuma movimentação.', data: null };
+            const lastMov = p.movimentacoes && p.movimentacoes.length > 0 ? p.movimentacoes[p.movimentacoes.length - 1] : { texto: 'Nenhuma movimentação registrada.', data: null };
             const card = `
-                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500">
-                    <div class="flex justify-between items-start">
-                        <div>
+                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500 transition hover:shadow-lg">
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="flex-grow">
                             <span class="text-sm font-semibold py-1 px-3 rounded-full ${statusColors[p.situacao] || ''}">${p.situacao}</span>
-                            <h3 class="text-xl font-bold mt-2">${p.numero}</h3>
-                            <p>${p.cliente}</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-2">${p.numero}</h3>
+                            <p class="text-gray-700 font-medium">${p.cliente}</p>
                         </div>
-                        <button class="edit-btn" data-id="${p.id}"><i class="fa fa-pencil-alt text-blue-500"></i></button>
+                        <div class="flex-shrink-0">
+                            <button class="edit-btn text-blue-600 hover:text-blue-800 h-9 w-9 grid place-content-center rounded-full hover:bg-gray-100" data-id="${p.id}" title="Editar Processo"><i class="fa fa-pencil-alt"></i></button>
+                        </div>
                     </div>
                     <div class="mt-4 pt-4 border-t">
                         <p class="text-sm font-medium text-gray-500">Última Movimentação:</p>
-                        <p>${lastMov.texto}</p>
-                        <small>${lastMov.data ? new Date(lastMov.data).toLocaleString('pt-BR') : ''}</small>
+                        <p class="text-gray-800">${lastMov.texto}</p>
+                        <small class="text-gray-500">${lastMov.data ? new Date(lastMov.data).toLocaleString('pt-BR') : ''}</small>
                     </div>
-                    <div class="mt-4 pt-4 border-t">
-                        <button class="movimentacoes-btn w-full bg-gray-100 p-2 rounded-md" data-id="${p.id}">
-                            Ver Histórico (${p.movimentacoes?.length || 0})
+                    <div class="mt-4">
+                        <button class="movimentacoes-btn w-full bg-gray-100 p-2 rounded-md hover:bg-gray-200 transition" data-id="${p.id}">
+                            Ver Histórico de Movimentações (${p.movimentacoes?.length || 0})
                         </button>
                     </div>
                 </div>
@@ -136,11 +179,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadProcesses() {
         try {
-            allProcesses = await api.getProcesses();
+            loadingDiv.style.display = 'block';
+            noResultsDiv.style.display = 'none';
+            processList.innerHTML = '';
+            
+            const processes = await api.getProcesses();
+            if(!Array.isArray(processes)) { // Checagem de erro da API
+                throw new Error("A API não retornou uma lista de processos.");
+            }
+            allProcesses = processes;
             renderProcesses();
         } catch (error) {
             console.error('Erro ao carregar processos:', error);
-            loadingDiv.innerHTML = '<p class="text-red-500">Erro ao carregar processos.</p>';
+            loadingDiv.innerHTML = '<p class="text-red-500">Falha ao carregar processos. Verifique se a API está funcionando corretamente.</p>';
         }
     }
 
@@ -155,38 +206,20 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(processModal);
     });
 
-    document.querySelectorAll('.cancelBtn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            closeModal(processModal);
-            closeModal(movimentacoesModal);
-        });
-    });
+    document.querySelectorAll('.cancelBtn').forEach(btn => btn.addEventListener('click', () => {
+        closeModal(processModal);
+        closeModal(movimentacoesModal);
+    }));
 
     processForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = processIdInput.value;
-        const data = {
-            numero: document.getElementById('numeroProcesso').value,
-            cliente: document.getElementById('nomeCliente').value,
-            acao: document.getElementById('tipoAcao').value,
-            link: document.getElementById('linkPainel').value,
-            situacao: document.getElementById('situacao').value,
-            audiencia: document.getElementById('proximaAudiencia').value,
-            obs: document.getElementById('observacao').value
-        };
-
+        const data = { numero: document.getElementById('numeroProcesso').value, cliente: document.getElementById('nomeCliente').value, acao: document.getElementById('tipoAcao').value, link: document.getElementById('linkPainel').value, situacao: document.getElementById('situacao').value, audiencia: document.getElementById('proximaAudiencia').value, obs: document.getElementById('observacao').value };
         try {
-            if (id) {
-                await api.updateProcess(id, data);
-            } else {
-                await api.createProcess(data);
-            }
+            id ? await api.updateProcess(id, data) : await api.createProcess(data);
             closeModal(processModal);
-            loadProcesses(); // Recarrega a lista
-        } catch (error) {
-            console.error('Erro ao salvar:', error);
-            alert('Falha ao salvar o processo.');
-        }
+            loadProcesses();
+        } catch (error) { alert('Falha ao salvar o processo.'); }
     });
 
     processList.addEventListener('click', (e) => {
@@ -194,11 +227,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editBtn) {
             const process = allProcesses.find(p => p.id == editBtn.dataset.id);
             if (process) {
-                processIdInput.value = process.id;
                 modalTitle.textContent = 'Editar Processo';
+                processIdInput.value = process.id;
                 document.getElementById('numeroProcesso').value = process.numero;
                 document.getElementById('nomeCliente').value = process.cliente;
-                // ... preencher outros campos
+                document.getElementById('tipoAcao').value = process.acao;
+                document.getElementById('linkPainel').value = process.link;
+                document.getElementById('situacao').value = process.situacao;
+                document.getElementById('proximaAudiencia').value = process.audiencia ? new Date(process.audiencia).toISOString().split('T')[0] : '';
+                document.getElementById('observacao').value = process.obs;
                 openModal(processModal);
             }
         }
@@ -218,10 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMovimentacoes(movs) {
         movimentacoesList.innerHTML = '';
         if (movs.length === 0) {
-            movimentacoesList.innerHTML = '<p class="text-gray-500">Nenhuma movimentação.</p>'; return;
+            movimentacoesList.innerHTML = '<p class="text-gray-500">Nenhuma movimentação registrada.</p>'; return;
         }
         [...movs].reverse().forEach(mov => {
-            movimentacoesList.innerHTML += `<div class="p-2 bg-gray-50 rounded"><p>${mov.texto}</p><small>${new Date(mov.data).toLocaleString('pt-BR')}</small></div>`;
+            movimentacoesList.innerHTML += `<div class="p-2 bg-gray-50 rounded"><p class="text-gray-800">${mov.texto}</p><small class="text-gray-500">${new Date(mov.data).toLocaleString('pt-BR')}</small></div>`;
         });
     }
 
@@ -231,22 +268,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const texto = document.getElementById('novaMovimentacao').value;
         try {
             const updatedProcess = await api.addMovement(id, texto);
-            // Atualiza a lista na UI
             const processIndex = allProcesses.findIndex(p => p.id == id);
             allProcesses[processIndex] = updatedProcess;
             renderMovimentacoes(updatedProcess.movimentacoes);
             document.getElementById('novaMovimentacao').value = '';
-            renderProcesses(); // Re-renderiza a lista principal para atualizar a contagem
-        } catch(error) {
-            console.error('Erro ao adicionar movimentação:', error);
-            alert('Falha ao adicionar movimentação.');
-        }
+            renderProcesses();
+        } catch(error) { alert('Falha ao adicionar movimentação.'); }
     });
     
     searchInput.addEventListener('input', () => renderProcesses());
 
-    // --- INICIALIZAÇÃO ---
-    loadProcesses();
+    // --- INICIALIZAÇÃO DA APP ---
+    function initializeApp() {
+        loadProcesses();
+    }
 });
 </script>
 </body>
