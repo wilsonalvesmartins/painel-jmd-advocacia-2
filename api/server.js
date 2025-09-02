@@ -40,6 +40,17 @@ connectWithRetry();
 
 const initializeDb = async () => {
     try {
+        // CORREÇÃO CRÍTICA: Cria a tabela principal se ela não existir.
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS processes (
+                id SERIAL PRIMARY KEY,
+                numero VARCHAR(255) NOT NULL,
+                cliente VARCHAR(255) NOT NULL,
+                movimentacoes JSONB DEFAULT '[]',
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
         // Verifica e adiciona novas colunas à tabela processes se não existirem
         await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS status VARCHAR(255)');
         await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia DATE');
