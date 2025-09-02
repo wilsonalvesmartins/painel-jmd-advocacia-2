@@ -25,7 +25,7 @@
         .day-number { font-size: 0.9rem; }
         .event-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; }
         .event-audiencia { background-color: #3b82f6; }
-        .event-prazo { background-color: #f59e0b; }
+        .event-prazo { background-color: #ef4444; } /* Amarelo para Vermelho */
         .tribunal-group > div { cursor: pointer; }
         .tribunal-item.selected { background-color: #e0e7ff; }
     </style>
@@ -116,7 +116,7 @@
                         <h3 class="text-xl font-bold text-primary">Calendário de Eventos</h3>
                         <div class="flex items-center gap-4 text-sm">
                             <span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Audiências</span>
-                            <span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div> Prazos</span>
+                            <span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div> Prazos</span>
                         </div>
                     </div>
                     <div class="flex items-center justify-between mb-4">
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, options);
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido.' }));
+                const errorData = await response.json().catch(() => ({ message: 'A API não respondeu ou retornou um erro inesperado.' }));
                 throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
             }
             if (response.status === 204) return null;
@@ -350,11 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE AUTENTICAÇÃO E CONFIGURAÇÕES GLOBAIS ---
     const fetchSettings = async () => {
         try {
-            const settings = await apiRequest('/api/settings');
-            if (settings && settings.logo_url) {
-                loginLogo.src = settings.logo_url;
-                mainLogo.src = settings.logo_url;
-                logoUrlInput.value = settings.logo_url;
+            // Usamos fetch normal aqui para não acionar o showError global se falhar
+            const response = await fetch('/api/settings');
+            if(response.ok) {
+                const settings = await response.json();
+                if (settings && settings.logo_url) {
+                    loginLogo.src = settings.logo_url;
+                    mainLogo.src = settings.logo_url;
+                    logoUrlInput.value = settings.logo_url;
+                }
             }
         } catch(e) {
             console.error("Não foi possível carregar as configurações.");
@@ -365,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginScreen.classList.remove('hidden');
         appScreen.classList.add('hidden');
         sessionStorage.removeItem('loggedIn');
-        fetchSettings(); // Carrega o logo mesmo na tela de login
+        fetchSettings();
     };
 
     const showAppScreen = () => {
@@ -407,27 +411,108 @@ document.addEventListener('DOMContentLoaded', () => {
     navConfig.addEventListener('click', () => navigateTo('config'));
 
     // --- LÓGICA DE ESTADO E RENDERIZAÇÃO ---
-    const showLoading = () => { /* ... */ };
-    const showError = (message) => { /* ... */ };
-    const showNoResults = () => { /* ... */ };
+    const showLoading = (page) => {
+        if (page === 'processos') {
+            loadingState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            noResults.classList.add('hidden');
+            processList.innerHTML = '';
+        } else if (page === 'gestao') {
+            gestaoPendentes.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            gestaoExecucao.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            gestaoSemana.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            calendarContainer.innerHTML = '<p class="text-sm text-gray-500">A carregar calendário...</p>';
+        }
+    };
+
+    const showError = (message) => {
+        loadingState.classList.add('hidden');
+        errorState.classList.remove('hidden');
+        errorMessage.textContent = `Falha ao carregar. Erro: ${message}`;
+        noResults.classList.add('hidden');
+        processList.innerHTML = '';
+    };
+
+    const showNoResults = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        noResults.classList.remove('hidden');
+        processList.innerHTML = '';
+    };
 
     // --- LÓGICA DE PROCESSOS ---
     const fetchProcesses = async () => {
-        showLoading();
+        showLoading('processos');
         try {
             const params = new URLSearchParams(activeFilters);
             allProcesses = await apiRequest(`/api/processes?${params.toString()}`);
             renderProcesses();
-        } catch (error) { /* ... */ }
+        } catch (error) { /* Erro já é tratado no apiRequest */ }
     };
 
     const renderProcesses = () => {
-        // ... (código existente para renderizar processos) ...
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredProcesses = allProcesses.filter(p => 
+            p.numero.toLowerCase().includes(searchTerm) || 
+            p.cliente.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredProcesses.length === 0) {
+            showNoResults();
+            return;
+        }
+        noResults.classList.add('hidden');
+        processList.innerHTML = '';
+
+        filteredProcesses.forEach(p => {
+            const statusColor = statusColors[p.status] || statusColors.default;
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-primary transition hover:shadow-lg cursor-pointer';
+            card.dataset.processId = p.id;
+
+            card.innerHTML = `
+                <div class="flex flex-wrap justify-between items-start gap-4">
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-2 flex-wrap">
+                           <span class="text-sm font-semibold py-1 px-3 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
+                           ${p.tribunal ? `<span class="text-xs font-medium py-1 px-2 rounded-full bg-gray-200 text-gray-700">${p.tribunal}</span>` : ''}
+                           ${p.vara ? `<span class="text-xs font-medium py-1 px-2 rounded-full bg-gray-200 text-gray-700">${p.vara}</span>` : ''}
+                        </div>
+                        <h3 class="text-xl font-bold text-primary">${p.numero}</h3>
+                        <p class="text-md text-gray-700">${p.cliente}</p>
+                    </div>
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <select data-id="${p.id}" class="status-select text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                            ${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                        </select>
+                        <button data-id="${p.id}" class="add-movimentacao-btn bg-primary text-secondary h-9 w-9 grid place-content-center rounded-full hover:opacity-90" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4>
+                    <div class="space-y-2 text-sm">
+                        ${[...(p.movimentacoes || [])].reverse().slice(0, 2).map(m => `
+                            <div class="p-2 bg-gray-50 rounded-md">
+                                <p class="text-gray-800">${m.descricao}</p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>
+                                    ${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600">Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-xs text-gray-500">Nenhuma movimentação registada.</p>'}
+                    </div>
+                </div>
+            `;
+            processList.appendChild(card);
+        });
     };
     
+    // --- LÓGICA DE FILTROS E PESQUISA ---
     searchInput.addEventListener('input', renderProcesses);
-
-    // --- LÓGICA DOS FILTROS ---
+    
     const renderTribunalFilter = () => {
         tribunalFilterList.innerHTML = '';
         const createGroup = (title, items) => {
@@ -554,11 +639,45 @@ document.addEventListener('DOMContentLoaded', () => {
         linksList.innerHTML = '';
         openModal(processModal);
     });
+    
+    processList.addEventListener('click', (e) => {
+        if (e.target.closest('.add-movimentacao-btn')) {
+            e.stopPropagation();
+            const id = e.target.closest('.add-movimentacao-btn').dataset.id;
+            movimentacaoProcessIdInput.value = id;
+            movimentacaoForm.reset();
+            prazoFatalContainer.classList.add('hidden');
+            definirPrazoCheckbox.checked = false;
+            openModal(movimentacaoModal);
+        } else if (e.target.closest('.status-select')) {
+            e.stopPropagation(); 
+        } else {
+            const card = e.target.closest('[data-process-id]');
+            if (card) {
+                const id = card.dataset.processId;
+                openEditModal(id);
+            }
+        }
+    });
 
     const openEditModal = (id) => {
-        // ... (código existente para abrir modal de edição) ...
+        const process = allProcesses.find(p => p.id == id);
+        if (!process) return;
+        currentProcessId = id;
+
+        processModalTitle.textContent = 'Editar Processo';
+        processForm.reset();
+        processIdInput.value = process.id;
+        document.getElementById('numeroProcesso').value = process.numero;
+        document.getElementById('nomeCliente').value = process.cliente;
         document.getElementById('tribunal').value = process.tribunal || '';
         document.getElementById('vara').value = process.vara || '';
+        document.getElementById('proximaAudiencia').value = process.proxima_audiencia ? new Date(process.proxima_audiencia).toISOString().split('T')[0] : '';
+        
+        renderLinks(process.links);
+
+        editExtraFields.classList.remove('hidden');
+        openModal(processModal);
     };
 
     processForm.addEventListener('submit', async (e) => {
@@ -570,24 +689,212 @@ document.addEventListener('DOMContentLoaded', () => {
             tribunal: document.getElementById('tribunal').value,
             vara: document.getElementById('vara').value
         };
-        // ... (código existente para submeter formulário) ...
+        
+        try {
+            if (id) {
+                data.proxima_audiencia = document.getElementById('proximaAudiencia').value;
+                await apiRequest(`/api/processes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            } else {
+                await apiRequest('/api/processes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            }
+            closeModal(processModal);
+            if (pageGestao.classList.contains('hidden')) {
+                fetchProcesses();
+            } else {
+                fetchGestaoData();
+            }
+        } catch(err) { /* Erro já é tratado no apiRequest */ }
+    });
+
+    // --- LÓGICA DE LINKS ---
+    const renderLinks = (links) => {
+        linksList.innerHTML = '';
+        if (!links || links.length === 0) {
+            linksList.innerHTML = '<p class="text-xs text-gray-500">Nenhum link adicionado.</p>';
+            return;
+        }
+        links.forEach(link => {
+            const linkEl = document.createElement('div');
+            linkEl.className = 'flex items-center justify-between bg-gray-100 p-2 rounded';
+            linkEl.innerHTML = `
+                <a href="${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline truncate" title="${link.url}">
+                    <i class="fas fa-link mr-2"></i>${link.descricao}
+                </a>
+                <button data-link-id="${link.id}" class="delete-link-btn text-red-500 hover:text-red-700 text-xs p-1"><i class="fas fa-trash"></i></button>
+            `;
+            linksList.appendChild(linkEl);
+        });
+    };
+    addLinkBtn.addEventListener('click', async () => {
+        const urlInput = document.getElementById('newLinkUrl');
+        const descInput = document.getElementById('newLinkDesc');
+        if (!urlInput.value || !descInput.value) {
+            alert('Por favor, preencha a URL e a descrição do link.');
+            return;
+        }
+
+        const data = { url: urlInput.value, descricao: descInput.value };
+        try {
+            const updatedProcess = await apiRequest(`/api/processes/${currentProcessId}/links`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            renderLinks(updatedProcess.links);
+            const index = allProcesses.findIndex(p => p.id == currentProcessId);
+            if(index !== -1) allProcesses[index] = updatedProcess;
+            urlInput.value = '';
+            descInput.value = '';
+        } catch(err) { /* Erro já é tratado no apiRequest */ }
+    });
+    linksList.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-link-btn');
+        if (deleteBtn) {
+            const linkId = deleteBtn.dataset.linkId;
+            if (confirm('Tem a certeza que quer apagar este link?')) {
+                try {
+                    const updatedProcess = await apiRequest(`/api/processes/${currentProcessId}/links/${linkId}`, { method: 'DELETE' });
+                    renderLinks(updatedProcess.links);
+                    const index = allProcesses.findIndex(p => p.id == currentProcessId);
+                    if(index !== -1) allProcesses[index] = updatedProcess;
+                } catch(err) { /* Erro já é tratado no apiRequest */ }
+            }
+        }
+    });
+
+    // --- LÓGICA DE MOVIMENTAÇÕES E STATUS ---
+    definirPrazoCheckbox.addEventListener('change', () => {
+        prazoFatalContainer.classList.toggle('hidden', !definirPrazoCheckbox.checked);
+    });
+
+    movimentacaoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = movimentacaoProcessIdInput.value;
+        const data = {
+            descricao: document.getElementById('movimentacaoDescricao').value,
+            prazo_fatal: definirPrazoCheckbox.checked ? document.getElementById('prazoFatal').value : null
+        };
+        try {
+            await apiRequest(`/api/processes/${id}/movimentacoes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            closeModal(movimentacaoModal);
+            if (pageGestao.classList.contains('hidden')) {
+                fetchProcesses();
+            } else {
+                fetchGestaoData();
+            }
+        } catch(err) { /* Erro já é tratado no apiRequest */ }
     });
     
+    processList.addEventListener('change', async (e) => {
+        if (e.target.classList.contains('status-select')) {
+            const id = e.target.dataset.id;
+            const newStatus = e.target.value;
+            try {
+                const updatedProcess = await apiRequest(`/api/processes/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+                const index = allProcesses.findIndex(p => p.id == id);
+                if (index !== -1) allProcesses[index] = updatedProcess;
+                renderProcesses();
+            } catch(err) { /* Erro já é tratado no apiRequest */ }
+        }
+    });
+
+    // --- LÓGICA DA PÁGINA DE GESTÃO ---
+    const fetchGestaoData = async () => {
+        showLoading('gestao');
+        try {
+            const data = await apiRequest('/api/gestao');
+            
+            gestaoPendentes.innerHTML = data.pendentes.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum processo pendente.</p>';
+            gestaoExecucao.innerHTML = data.execucao.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum processo em execução.</p>';
+            gestaoSemana.innerHTML = data.semana.map(m => `<div class="p-2 bg-gray-100 rounded text-sm"><p class="font-semibold">${m.numero}</p><p>${m.descricao}</p><p class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</p></div>`).join('') || '<p class="text-sm text-gray-500">Nenhuma movimentação esta semana.</p>';
+
+            calendarEvents = data.calendario;
+            renderCalendar();
+
+        } catch(err) {
+             gestaoPendentes.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+             gestaoExecucao.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+             gestaoSemana.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+             calendarContainer.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar calendário.</p>';
+        }
+    };
+    
+    // --- LÓGICA DO CALENDÁRIO ---
+    const renderCalendar = () => {
+        calendarContainer.innerHTML = '';
+        const month = calendarDate.getMonth();
+        const year = calendarDate.getFullYear();
+        
+        calendarMonthYear.textContent = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid';
+
+        const dayHeaders = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        dayHeaders.forEach(day => {
+            const headerEl = document.createElement('div');
+            headerEl.className = 'text-center font-bold text-xs text-primary';
+            headerEl.textContent = day;
+            grid.appendChild(headerEl);
+        });
+
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'calendar-day';
+            const dayDate = new Date(year, month, day).toISOString().split('T')[0];
+
+            const audienciasDoDia = calendarEvents.audiencias.filter(a => a.date && a.date.startsWith(dayDate));
+            const prazosDoDia = calendarEvents.prazos.filter(p => p.date && p.date.startsWith(dayDate));
+            
+            let tooltipText = [];
+
+            let eventsHtml = '<div class="flex gap-1">';
+            if (audienciasDoDia.length > 0) {
+                eventsHtml += '<div class="event-dot event-audiencia"></div>';
+                tooltipText.push(`Audiências:\n${audienciasDoDia.map(a => `- ${a.numero}`).join('\n')}`);
+            }
+            if (prazosDoDia.length > 0) {
+                eventsHtml += '<div class="event-dot event-prazo"></div>';
+                tooltipText.push(`Prazos:\n${prazosDoDia.map(p => `- ${p.descricao} (${p.numero})`).join('\n')}`);
+            }
+            eventsHtml += '</div>';
+
+            dayEl.innerHTML = `<span class="day-number">${day}</span> ${eventsHtml}`;
+            if(tooltipText.length > 0) {
+                dayEl.title = tooltipText.join('\n\n');
+            }
+            
+            grid.appendChild(dayEl);
+        }
+        calendarContainer.appendChild(grid);
+    };
+
+    prevMonthBtn.addEventListener('click', () => {
+        calendarDate.setMonth(calendarDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        calendarDate.setMonth(calendarDate.getMonth() + 1);
+        renderCalendar();
+    });
+
     // --- LÓGICA DA PÁGINA DE CONFIGURAÇÕES ---
     configForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const logo_url = logoUrlInput.value;
         try {
-            await apiRequest('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ logo_url })
-            });
+            await apiRequest('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logo_url }) });
             alert('Configurações salvas com sucesso!');
             fetchSettings();
-        } catch(err) {
-            alert(`Erro ao salvar configurações: ${err.message}`);
-        }
+        } catch(err) { alert(`Erro ao salvar configurações: ${err.message}`); }
     });
 
     // --- INICIALIZAÇÃO ---
@@ -598,6 +905,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     populateTribunalSelect();
     renderTribunalFilter();
+
+    document.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal');
+            if (modal) closeModal(modal);
+        });
+    });
+    const closeModal = (modalElement) => {
+        if(modalElement) modalElement.style.display = 'none';
+    }
 });
 </script>
 </body>
