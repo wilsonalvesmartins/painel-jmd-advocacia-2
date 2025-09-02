@@ -22,9 +22,13 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    # --- A CORREÇÃO ESTÁ AQUI ---
+    # A API agora conhece as credenciais para se identificar na base de dados
     environment:
-      # Esta variável agora é construída usando os valores do serviço 'db' abaixo
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POSTGRES_USER: jmd_user
+      POSTGRES_PASSWORD: superstrongpassword123 # Recomendo que troque esta senha
+      POSTGRES_DB: jmd_processos
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     networks:
       - jmd-network
 
@@ -33,10 +37,10 @@ services:
     image: postgres:15-alpine
     container_name: jmd_database
     restart: unless-stopped
-    # As credenciais são definidas aqui e usadas pela API
+    # As mesmas credenciais são usadas aqui para inicializar a base de dados
     environment:
       POSTGRES_USER: jmd_user
-      POSTGRES_PASSWORD: superstrongpassword123 # Troque por uma senha realmente segura
+      POSTGRES_PASSWORD: superstrongpassword123 # Recomendo que troque esta senha
       POSTGRES_DB: jmd_processos
     volumes:
       - postgres_data:/var/lib/postgresql/data
