@@ -8,35 +8,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 24px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; }
+        body { font-family: 'Inter', sans-serif; background-color: #d9d9d9; }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 24px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; }
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .hidden { display: none; }
-        .nav-link { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
-        .nav-link.active { background-color: #4f46e5; color: white; }
-        .nav-link:not(.active) { color: #4b5563; }
-        .nav-link:not(.active):hover { background-color: #e0e7ff; }
+        .nav-link { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 600; transition: background-color 0.2s, color 0.2s; }
+        .nav-link.active { background-color: #132433; color: #d9d9d9; }
+        .nav-link:not(.active) { color: #132433; }
+        .nav-link:not(.active):hover { background-color: #ffffff; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day { aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.8rem; position: relative; }
+        .calendar-day-header { font-weight: 600; }
+        .day-number { font-size: 0.9rem; }
+        .event-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; }
+        .event-audiencia { background-color: #3b82f6; }
+        .event-prazo { background-color: #f59e0b; }
     </style>
+     <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                'primary': '#132433',
+                'secondary': '#d9d9d9',
+                'accent': '#bfbfbf'
+              }
+            }
+          }
+        }
+      </script>
 </head>
 <body class="antialiased">
 
     <!-- Tela de Login -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
-        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">JMD Advocacia - Acesso</h2>
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-secondary">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <img src="https://placehold.co/300x80/132433/d9d9d9?text=Seu+Logo" alt="Logo" class="mx-auto mb-6 h-16 object-contain">
+            <h2 class="text-2xl font-bold mb-6 text-center text-primary">Acesso ao Painel</h2>
             <form id="loginForm">
                 <div class="mb-4">
                     <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
                 </div>
                 <div class="mb-6">
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Palavra-passe</label>
-                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
                 </div>
                 <p id="loginError" class="text-red-500 text-sm text-center mb-4 hidden">Utilizador ou palavra-passe inválidos.</p>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 shadow">Entrar</button>
+                <button type="submit" class="w-full bg-primary text-secondary font-semibold py-2 px-5 rounded-md hover:opacity-90 shadow transition-opacity">Entrar</button>
             </form>
         </div>
     </div>
@@ -46,16 +67,15 @@
         <header class="mb-8">
             <div class="max-w-7xl mx-auto">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl font-bold text-gray-800">JMD Advocacia</h1>
-                        <h2 class="text-xl font-semibold text-gray-600">Painel de Acompanhamento Processual</h2>
+                    <div class="flex items-center gap-4">
+                        <img src="https://placehold.co/200x60/132433/d9d9d9?text=Seu+Logo" alt="Logo" class="h-12 object-contain">
+                        <h2 class="text-xl font-semibold text-primary/80 hidden sm:block">Painel de Acompanhamento Processual</h2>
                     </div>
-                    <button id="logoutBtn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 shadow flex items-center gap-2">
+                    <button id="logoutBtn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 shadow flex items-center gap-2">
                         <i class="fa fa-sign-out-alt"></i><span>Sair</span>
                     </button>
                 </div>
-                <!-- Navegação -->
-                <nav class="mt-6 flex items-center gap-2 bg-gray-200 p-1 rounded-lg">
+                <nav class="mt-6 flex items-center gap-2 bg-white p-1 rounded-lg shadow-sm">
                     <a id="nav-processos" class="nav-link active">Painel de Processos</a>
                     <a id="nav-gestao" class="nav-link">Gestão</a>
                 </nav>
@@ -65,38 +85,51 @@
         <main class="max-w-7xl mx-auto">
             <!-- PÁGINA: PAINEL DE PROCESSOS -->
             <div id="page-processos">
-                <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
-                    <div class="relative w-full sm:w-auto flex-grow sm:flex-grow-0 sm:max-w-xs">
+                 <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div class="relative w-full sm:w-auto flex-grow sm:flex-grow-0 sm:max-w-md">
                         <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input id="searchInput" type="text" placeholder="Procurar por nº ou nome..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md">
+                        <input id="searchInput" type="text" placeholder="Procurar por nº ou nome do cliente..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
                     </div>
-                    <button id="addProcessBtn" class="bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 shadow flex items-center gap-2">
+                    <button id="addProcessBtn" class="bg-primary text-secondary font-semibold py-2 px-5 rounded-md hover:opacity-90 shadow flex items-center gap-2 transition-opacity">
                         <i class="fa fa-plus"></i><span>Novo Processo</span>
                     </button>
                 </div>
                 <div id="processList" class="space-y-4"></div>
-                <div id="loading-state" class="text-center py-10"><p class="text-gray-500 text-lg">A carregar processos...</p></div>
+                <div id="loading-state" class="text-center py-10"><p class="text-gray-600 text-lg">A carregar processos...</p></div>
                 <div id="error-state" class="hidden text-center py-10 bg-red-50 border border-red-200 rounded-lg"><p id="errorMessage" class="text-red-600 font-semibold text-lg">Falha ao carregar processos.</p></div>
-                <div id="no-results" class="hidden text-center py-10"><p class="text-gray-500 text-lg">Nenhum processo encontrado.</p></div>
+                <div id="no-results" class="hidden text-center py-10"><p class="text-gray-600 text-lg">Nenhum processo encontrado.</p></div>
             </div>
 
             <!-- PÁGINA: GESTÃO -->
             <div id="page-gestao" class="hidden">
+                 <div class="bg-white p-5 rounded-lg shadow-sm mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-primary">Calendário de Eventos</h3>
+                        <div class="flex items-center gap-4 text-sm">
+                            <span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Audiências</span>
+                            <span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div> Prazos</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prevMonthBtn" class="p-2 rounded-full hover:bg-gray-200"><i class="fas fa-chevron-left"></i></button>
+                        <h4 id="calendar-month-year" class="text-lg font-semibold text-primary"></h4>
+                        <button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-200"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div id="calendar-container"></div>
+                 </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Coluna Pendentes de Manifestação -->
                     <div class="bg-white p-5 rounded-lg shadow-sm">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Pendentes de Manifestação</h3>
+                        <h3 class="text-xl font-bold text-primary mb-4">Pendentes de Manifestação</h3>
                         <div id="gestao-pendentes" class="space-y-3"></div>
                     </div>
-                    <!-- Coluna Em Fase de Execução -->
                     <div class="bg-white p-5 rounded-lg shadow-sm">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Em Fase de Execução</h3>
+                        <h3 class="text-xl font-bold text-primary mb-4">Em Fase de Execução</h3>
                         <div id="gestao-execucao" class="space-y-3"></div>
                     </div>
                 </div>
-                <!-- Movimentações da Semana -->
                 <div class="bg-white p-5 rounded-lg shadow-sm mt-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Movimentações da Semana</h3>
+                    <h3 class="text-xl font-bold text-primary mb-4">Movimentações da Semana</h3>
                     <div id="gestao-semana" class="space-y-3"></div>
                 </div>
             </div>
@@ -104,17 +137,31 @@
     </div>
 
     <!-- MODAIS -->
-    <!-- Modal para Adicionar Processo -->
+    <!-- Modal para Adicionar/Editar Processo -->
     <div id="processModal" class="modal"><div class="modal-content animate-fade-in">
         <form id="processForm">
-            <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Processo</h3>
+            <h3 id="processModalTitle" class="text-2xl font-bold mb-6 text-primary">Novo Processo</h3>
+            <input type="hidden" id="processId">
             <div class="space-y-4">
                 <div><label for="numeroProcesso" class="block text-sm font-medium text-gray-700 mb-1">Número do Processo</label><input type="text" id="numeroProcesso" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div>
                 <div><label for="nomeCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label><input type="text" id="nomeCliente" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div>
+                <div id="editExtraFields" class="hidden">
+                    <hr class="my-4">
+                    <div><label for="proximaAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Próxima Audiência</label><input type="date" id="proximaAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div class="mt-4">
+                        <h4 class="text-md font-medium text-gray-700 mb-2">Links de Documentos</h4>
+                        <div id="linksList" class="space-y-2 mb-2"></div>
+                        <div class="flex gap-2">
+                            <input type="url" id="newLinkUrl" placeholder="URL do documento" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md">
+                            <input type="text" id="newLinkDesc" placeholder="Descrição (Ex: Petição Inicial)" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md">
+                            <button type="button" id="addLinkBtn" class="bg-blue-500 text-white px-3 rounded-md hover:bg-blue-600"><i class="fa fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="mt-8 flex justify-end gap-3">
-                <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Salvar Processo</button>
+                <button type="button" data-modal-close class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-secondary rounded-md hover:opacity-90 font-semibold">Salvar</button>
             </div>
         </form>
     </div></div>
@@ -122,19 +169,20 @@
     <!-- Modal para Adicionar Movimentação -->
     <div id="movimentacaoModal" class="modal"><div class="modal-content animate-fade-in">
         <form id="movimentacaoForm">
-            <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Movimentação</h3>
+            <h3 class="text-2xl font-bold mb-6 text-primary">Adicionar Movimentação</h3>
             <input type="hidden" id="movimentacaoProcessId">
             <div><label for="movimentacaoDescricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label><textarea id="movimentacaoDescricao" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea></div>
-            <div class="mt-4"><label class="flex items-center"><input type="checkbox" id="definirPrazo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded"> <span class="ml-2 text-sm text-gray-700">Definir prazo fatal</span></label></div>
+            <div class="mt-4"><label class="flex items-center"><input type="checkbox" id="definirPrazo" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"> <span class="ml-2 text-sm text-gray-700">Definir prazo fatal</span></label></div>
             <div id="prazoFatalContainer" class="mt-4 hidden"><label for="prazoFatal" class="block text-sm font-medium text-gray-700 mb-1">Data do Prazo</label><input type="date" id="prazoFatal" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
             <div class="mt-8 flex justify-end gap-3">
-                <button type="button" id="cancelMovimentacaoBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Adicionar</button>
+                <button type="button" data-modal-close class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-secondary rounded-md hover:opacity-90 font-semibold">Adicionar</button>
             </div>
         </form>
     </div></div>
 
 <script>
+// Funções auxiliares e de inicialização...
 document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DA UI ---
     const loginScreen = document.getElementById('login-screen');
@@ -143,43 +191,109 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
     
+    // Navegação
     const pageProcessos = document.getElementById('page-processos');
     const pageGestao = document.getElementById('page-gestao');
     const navProcessos = document.getElementById('nav-processos');
     const navGestao = document.getElementById('nav-gestao');
 
+    // Elementos da Página de Processos
     const addProcessBtn = document.getElementById('addProcessBtn');
-    const processModal = document.getElementById('processModal');
-    const processForm = document.getElementById('processForm');
     const processList = document.getElementById('processList');
-    const cancelBtn = document.getElementById('cancelBtn');
-    
-    const movimentacaoModal = document.getElementById('movimentacaoModal');
-    const movimentacaoForm = document.getElementById('movimentacaoForm');
-    const cancelMovimentacaoBtn = document.getElementById('cancelMovimentacaoBtn');
-    const definirPrazoCheckbox = document.getElementById('definirPrazo');
-    const prazoFatalContainer = document.getElementById('prazoFatalContainer');
-
     const searchInput = document.getElementById('searchInput');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
-    const noResults = document.getElementById('no-results');
     const errorMessage = document.getElementById('errorMessage');
+    const noResults = document.getElementById('no-results');
+
+    // Modais
+    const processModal = document.getElementById('processModal');
+    const processForm = document.getElementById('processForm');
+    const processModalTitle = document.getElementById('processModalTitle');
+    const processIdInput = document.getElementById('processId');
+    const editExtraFields = document.getElementById('editExtraFields');
+    const linksList = document.getElementById('linksList');
+    const addLinkBtn = document.getElementById('addLinkBtn');
+    
+    const movimentacaoModal = document.getElementById('movimentacaoModal');
+    const movimentacaoForm = document.getElementById('movimentacaoForm');
+    const movimentacaoProcessIdInput = document.getElementById('movimentacaoProcessId');
+    const definirPrazoCheckbox = document.getElementById('definirPrazo');
+    const prazoFatalContainer = document.getElementById('prazoFatalContainer');
+
+    // Elementos da Página de Gestão
+    const gestaoPendentes = document.getElementById('gestao-pendentes');
+    const gestaoExecucao = document.getElementById('gestao-execucao');
+    const gestaoSemana = document.getElementById('gestao-semana');
+    const calendarContainer = document.getElementById('calendar-container');
+    const calendarMonthYear = document.getElementById('calendar-month-year');
+    const prevMonthBtn = document.getElementById('prevMonthBtn');
+    const nextMonthBtn = document.getElementById('nextMonthBtn');
 
     let allProcesses = [];
+    let currentProcessId = null;
+    let calendarDate = new Date();
+    let calendarEvents = { audiencias: [], prazos: [] };
     const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
     const statusColors = {
-        "Distribuído": "bg-blue-100 text-blue-800",
-        "Pendente de manifestação": "bg-yellow-100 text-yellow-800",
-        "Aguardando Audiência": "bg-purple-100 text-purple-800",
-        "Sentença": "bg-green-100 text-green-800",
-        "Recurso": "bg-orange-100 text-orange-800",
-        "Liquidação": "bg-teal-100 text-teal-800",
-        "Em fase de execução": "bg-pink-100 text-pink-800",
-        "N/D": "bg-gray-100 text-gray-800"
+        "Distribuído": "bg-blue-200 text-blue-800",
+        "Pendente de manifestação": "bg-yellow-200 text-yellow-800",
+        "Aguardando Audiência": "bg-purple-200 text-purple-800",
+        "Sentença": "bg-green-200 text-green-800",
+        "Recurso": "bg-orange-200 text-orange-800",
+        "Liquidação": "bg-teal-200 text-teal-800",
+        "Em fase de execução": "bg-pink-200 text-pink-800",
+        "default": "bg-gray-200 text-gray-800"
     };
 
-    // --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+    // --- LÓGICA DE API ---
+    const apiRequest = async (url, options = {}) => {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido.' }));
+                throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+            }
+            // Retorna vazio se o status for 204 (No Content), comum em DELETE
+            if (response.status === 204) {
+                 return null;
+            }
+            return response.json();
+        } catch (error) {
+            console.error('Erro na API:', error);
+            showError(error.message);
+            throw error;
+        }
+    };
+    
+    // --- LÓGICA DE AUTENTICAÇÃO ---
+    const showLoginScreen = () => {
+        loginScreen.classList.remove('hidden');
+        appScreen.classList.add('hidden');
+        sessionStorage.removeItem('loggedIn');
+    };
+
+    const showAppScreen = () => {
+        loginScreen.classList.add('hidden');
+        appScreen.classList.remove('hidden');
+        sessionStorage.setItem('loggedIn', 'true');
+        navigateTo('processos');
+    };
+
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        if (username === 'escritorio' && password === '36672456') {
+            showAppScreen();
+        } else {
+            loginError.classList.remove('hidden');
+        }
+    });
+
+    logoutBtn.addEventListener('click', showLoginScreen);
+    
+    // --- LÓGICA DE NAVEGAÇÃO ---
     const navigateTo = (page) => {
         if (page === 'processos') {
             pageProcessos.classList.remove('hidden');
@@ -195,235 +309,285 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchGestaoData();
         }
     };
-
     navProcessos.addEventListener('click', () => navigateTo('processos'));
     navGestao.addEventListener('click', () => navigateTo('gestao'));
 
-    const checkLogin = () => {
-        if (sessionStorage.getItem('loggedIn') === 'true') {
-            loginScreen.classList.add('hidden');
-            appScreen.classList.remove('hidden');
-            navigateTo('processos');
-        } else {
-            loginScreen.classList.remove('hidden');
-            appScreen.classList.add('hidden');
-        }
-    };
-
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        if (username === 'escritorio' && password === '36672456') {
-            sessionStorage.setItem('loggedIn', 'true');
-            loginError.classList.add('hidden');
-            checkLogin();
-        } else {
-            loginError.classList.remove('hidden');
-        }
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('loggedIn');
-        checkLogin();
-    });
-
-    // --- LÓGICA DE API ---
-    const apiRequest = async (url, options = {}) => {
-        try {
-            const response = await fetch(url, options);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
-                throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
-            }
-            return response.json();
-        } catch (error) {
-            console.error('Erro na API:', error);
-            errorMessage.textContent = `Falha na comunicação com a API. Verifique a consola para mais detalhes. (${error.message})`;
-            loadingState.classList.add('hidden');
-            errorState.classList.remove('hidden');
-            throw error;
-        }
-    };
-
-    // --- LÓGICA DE PROCESSOS ---
-    const fetchProcesses = async () => {
+    // --- LÓGICA DE ESTADO E RENDERIZAÇÃO ---
+    const showLoading = () => {
         loadingState.classList.remove('hidden');
         errorState.classList.add('hidden');
         noResults.classList.add('hidden');
         processList.innerHTML = '';
+    };
+
+    const showError = (message) => {
+        loadingState.classList.add('hidden');
+        errorState.classList.remove('hidden');
+        errorMessage.textContent = `Falha ao carregar. Erro: ${message}`;
+        noResults.classList.add('hidden');
+        processList.innerHTML = '';
+    };
+
+    const showNoResults = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        noResults.classList.remove('hidden');
+        processList.innerHTML = '';
+    };
+
+    // --- LÓGICA DE PROCESSOS ---
+    const fetchProcesses = async () => {
+        showLoading();
         try {
             allProcesses = await apiRequest('/api/processes');
-            loadingState.classList.add('hidden');
             renderProcesses();
         } catch (error) {
-            // A mensagem de erro já é tratada em apiRequest
+            // showError já é chamado dentro de apiRequest
         }
     };
-    
+
     const renderProcesses = () => {
+        loadingState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        
         const searchTerm = searchInput.value.toLowerCase();
         const filteredProcesses = allProcesses.filter(p => 
             p.numero.toLowerCase().includes(searchTerm) || 
             p.cliente.toLowerCase().includes(searchTerm)
         );
 
-        processList.innerHTML = '';
         if (filteredProcesses.length === 0) {
-            noResults.classList.remove('hidden');
-        } else {
-            noResults.classList.add('hidden');
+            showNoResults();
+            return;
         }
-        
-        filteredProcesses.sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated));
+        noResults.classList.add('hidden');
+        processList.innerHTML = '';
 
         filteredProcesses.forEach(p => {
+            const statusColor = statusColors[p.status] || statusColors.default;
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500 transition hover:shadow-lg';
-            
-            const statusColor = statusColors[p.status || "N/D"] || statusColors["N/D"];
-            
-            const statusDropdown = `
-                <select class="status-select bg-transparent font-semibold py-1 px-2 rounded-full ${statusColor} border-0 focus:ring-0 appearance-none cursor-pointer" data-id="${p.id}">
-                    ${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                </select>
-            `;
+            card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-primary transition hover:shadow-lg cursor-pointer';
+            card.dataset.processId = p.id;
 
             card.innerHTML = `
                 <div class="flex flex-wrap justify-between items-start gap-4">
                     <div class="flex-grow">
                         <div class="flex items-center gap-3 mb-2">
-                           ${statusDropdown}
+                           <span class="text-sm font-semibold py-1 px-3 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-800">${p.numero}</h3>
-                        <p class="text-md font-semibold text-gray-700">${p.cliente}</p>
+                        <h3 class="text-xl font-bold text-primary">${p.numero}</h3>
+                        <p class="text-md text-gray-700">${p.cliente}</p>
                     </div>
                     <div class="flex-shrink-0 flex items-center gap-2">
-                        <button class="add-mov-btn text-green-600 hover:text-green-800 h-9 w-9 grid place-content-center rounded-full hover:bg-gray-100" data-id="${p.id}" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
+                        <select data-id="${p.id}" class="status-select text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                            ${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                        </select>
+                        <button data-id="${p.id}" class="add-movimentacao-btn bg-primary text-secondary h-9 w-9 grid place-content-center rounded-full hover:opacity-90" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-200">
                     <h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4>
-                    <div class="space-y-2">
-                        ${(p.movimentacoes && p.movimentacoes.length > 0) ? p.movimentacoes.slice(0, 3).map(mov => `
-                            <div class="p-2 rounded-md bg-gray-50">
-                                <p class="text-sm text-gray-800">${mov.descricao}</p>
+                    <div class="space-y-2 text-sm">
+                        ${[...(p.movimentacoes || [])].reverse().slice(0, 2).map(m => `
+                            <div class="p-2 bg-gray-50 rounded-md">
+                                <p class="text-gray-800">${m.descricao}</p>
                                 <div class="flex justify-between items-center mt-1">
-                                    <span class="text-xs text-gray-500">${new Date(mov.timestamp).toLocaleString('pt-BR')}</span>
-                                    ${mov.prazo_fatal ? `<span class="text-xs font-semibold text-red-600 flex items-center gap-1"><i class="far fa-calendar-times"></i> Prazo: ${new Date(mov.prazo_fatal).toLocaleDateString('pt-BR')}</span>` : ''}
+                                    <span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>
+                                    ${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600">Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>` : ''}
                                 </div>
                             </div>
-                        `).join('') : '<p class="text-sm text-gray-500">Nenhuma movimentação registada.</p>'}
+                        `).join('') || '<p class="text-xs text-gray-500">Nenhuma movimentação registada.</p>'}
                     </div>
                 </div>
             `;
             processList.appendChild(card);
         });
     };
+    
+    searchInput.addEventListener('input', renderProcesses);
+
+    // --- LÓGICA DOS MODAIS (Abrir/Fechar) ---
+    const openModal = (modalElement) => modalElement.style.display = 'flex';
+    const closeModal = (modalElement) => modalElement.style.display = 'none';
+
+    addProcessBtn.addEventListener('click', () => {
+        processModalTitle.textContent = 'Novo Processo';
+        processForm.reset();
+        processIdInput.value = '';
+        editExtraFields.classList.add('hidden');
+        linksList.innerHTML = '';
+        openModal(processModal);
+    });
+
+    document.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeModal(processModal);
+            closeModal(movimentacaoModal);
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === processModal) closeModal(processModal);
+        if (e.target === movimentacaoModal) closeModal(movimentacaoModal);
+    });
+
+    // --- LÓGICA DE EDIÇÃO E CRIAÇÃO DE PROCESSOS ---
+    processList.addEventListener('click', (e) => {
+        if (e.target.closest('.add-movimentacao-btn')) {
+            e.stopPropagation();
+            const id = e.target.closest('.add-movimentacao-btn').dataset.id;
+            movimentacaoProcessIdInput.value = id;
+            movimentacaoForm.reset();
+            prazoFatalContainer.classList.add('hidden');
+            definirPrazoCheckbox.checked = false;
+            openModal(movimentacaoModal);
+        } else if (e.target.closest('.status-select')) {
+            e.stopPropagation(); // Impede que o clique no select abra o modal de edição
+        } else {
+            const card = e.target.closest('[data-process-id]');
+            if (card) {
+                const id = card.dataset.processId;
+                openEditModal(id);
+            }
+        }
+    });
+
+    const openEditModal = (id) => {
+        const process = allProcesses.find(p => p.id == id);
+        if (!process) return;
+        currentProcessId = id;
+
+        processModalTitle.textContent = 'Editar Processo';
+        processForm.reset();
+        processIdInput.value = process.id;
+        document.getElementById('numeroProcesso').value = process.numero;
+        document.getElementById('nomeCliente').value = process.cliente;
+        document.getElementById('proximaAudiencia').value = process.proxima_audiencia ? new Date(process.proxima_audiencia).toISOString().split('T')[0] : '';
+        
+        renderLinks(process.links);
+
+        editExtraFields.classList.remove('hidden');
+        openModal(processModal);
+    };
 
     processForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const numero = document.getElementById('numeroProcesso').value;
-        const cliente = document.getElementById('nomeCliente').value;
+        const id = processIdInput.value;
+        const data = {
+            numero: document.getElementById('numeroProcesso').value,
+            cliente: document.getElementById('nomeCliente').value,
+        };
+        
         try {
-            await apiRequest('/api/processes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ numero, cliente })
-            });
+            if (id) {
+                data.proxima_audiencia = document.getElementById('proximaAudiencia').value;
+                await apiRequest(`/api/processes/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                await apiRequest('/api/processes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
             closeModal(processModal);
             fetchProcesses();
-        } catch(error) { /* já tratado */ }
+        } catch(err) {
+            alert(`Erro ao salvar: ${err.message}`);
+        }
     });
-    
+
+    // --- LÓGICA DE LINKS ---
+    const renderLinks = (links) => {
+        linksList.innerHTML = '';
+        if (!links || links.length === 0) {
+            linksList.innerHTML = '<p class="text-xs text-gray-500">Nenhum link adicionado.</p>';
+            return;
+        }
+        links.forEach(link => {
+            const linkEl = document.createElement('div');
+            linkEl.className = 'flex items-center justify-between bg-gray-100 p-2 rounded';
+            linkEl.innerHTML = `
+                <a href="${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline truncate" title="${link.url}">
+                    <i class="fas fa-link mr-2"></i>${link.descricao}
+                </a>
+                <button data-link-id="${link.id}" class="delete-link-btn text-red-500 hover:text-red-700 text-xs p-1"><i class="fas fa-trash"></i></button>
+            `;
+            linksList.appendChild(linkEl);
+        });
+    };
+
+    addLinkBtn.addEventListener('click', async () => {
+        const urlInput = document.getElementById('newLinkUrl');
+        const descInput = document.getElementById('newLinkDesc');
+        if (!urlInput.value || !descInput.value) {
+            alert('Por favor, preencha a URL e a descrição do link.');
+            return;
+        }
+
+        const data = { url: urlInput.value, descricao: descInput.value };
+        try {
+            const updatedProcess = await apiRequest(`/api/processes/${currentProcessId}/links`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            renderLinks(updatedProcess.links);
+            // Atualiza o processo na lista local
+            const index = allProcesses.findIndex(p => p.id == currentProcessId);
+            if(index !== -1) allProcesses[index] = updatedProcess;
+
+            urlInput.value = '';
+            descInput.value = '';
+        } catch(err) {
+            alert(`Erro ao adicionar link: ${err.message}`);
+        }
+    });
+
+    linksList.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-link-btn');
+        if (deleteBtn) {
+            const linkId = deleteBtn.dataset.linkId;
+            if (confirm('Tem a certeza que quer apagar este link?')) {
+                try {
+                    const updatedProcess = await apiRequest(`/api/processes/${currentProcessId}/links/${linkId}`, { method: 'DELETE' });
+                    renderLinks(updatedProcess.links);
+                    // Atualiza o processo na lista local
+                    const index = allProcesses.findIndex(p => p.id == currentProcessId);
+                    if(index !== -1) allProcesses[index] = updatedProcess;
+                } catch(err) {
+                    alert(`Erro ao apagar link: ${err.message}`);
+                }
+            }
+        }
+    });
+
+
+    // --- LÓGICA DE MOVIMENTAÇÕES E STATUS ---
+    definirPrazoCheckbox.addEventListener('change', () => {
+        prazoFatalContainer.classList.toggle('hidden', !definirPrazoCheckbox.checked);
+    });
+
     movimentacaoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = document.getElementById('movimentacaoProcessId').value;
-        const descricao = document.getElementById('movimentacaoDescricao').value;
-        const prazo_fatal = definirPrazoCheckbox.checked ? document.getElementById('prazoFatal').value : null;
-
+        const id = movimentacaoProcessIdInput.value;
+        const data = {
+            descricao: document.getElementById('movimentacaoDescricao').value,
+            prazo_fatal: definirPrazoCheckbox.checked ? document.getElementById('prazoFatal').value : null
+        };
         try {
             await apiRequest(`/api/processes/${id}/movimentacoes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descricao, prazo_fatal })
+                body: JSON.stringify(data)
             });
             closeModal(movimentacaoModal);
-            if (pageProcessos.classList.contains('hidden')) {
-                fetchGestaoData();
-            } else {
-                fetchProcesses();
-            }
-        } catch(error) { /* já tratado */ }
-    });
-
-    // --- LÓGICA DE GESTÃO ---
-    const fetchGestaoData = async () => {
-        const pendentesContainer = document.getElementById('gestao-pendentes');
-        const execucaoContainer = document.getElementById('gestao-execucao');
-        const semanaContainer = document.getElementById('gestao-semana');
-
-        pendentesContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
-        execucaoContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
-        semanaContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
-
-        try {
-            const data = await apiRequest('/api/gestao');
-
-            // Renderiza Pendentes de Manifestação
-            pendentesContainer.innerHTML = data.pendentes.length > 0 ? data.pendentes.map(p => `
-                <div class="p-2 rounded-md bg-yellow-50 border border-yellow-200">
-                    <p class="font-semibold text-sm text-gray-800">${p.numero}</p>
-                    <p class="text-xs text-gray-600">${p.cliente}</p>
-                </div>
-            `).join('') : '<p class="text-sm text-gray-500">Nenhum processo pendente.</p>';
-            
-            // Renderiza Em Fase de Execução
-            execucaoContainer.innerHTML = data.execucao.length > 0 ? data.execucao.map(p => `
-                <div class="p-2 rounded-md bg-pink-50 border border-pink-200">
-                    <p class="font-semibold text-sm text-gray-800">${p.numero}</p>
-                    <p class="text-xs text-gray-600">${p.cliente}</p>
-                </div>
-            `).join('') : '<p class="text-sm text-gray-500">Nenhum processo em execução.</p>';
-
-            // Renderiza Movimentações da Semana
-            semanaContainer.innerHTML = data.semana.length > 0 ? data.semana.map(m => `
-                <div class="p-2 rounded-md bg-gray-50">
-                    <p class="text-sm"><span class="font-bold">${m.numero}</span>: ${m.descricao}</p>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>
-                         ${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600 flex items-center gap-1"><i class="far fa-calendar-times"></i> Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR')}</span>` : ''}
-                    </div>
-                </div>
-            `).join('') : '<p class="text-sm text-gray-500">Nenhuma movimentação esta semana.</p>';
-
-        } catch (error) {
-             pendentesContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
-             execucaoContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
-             semanaContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
-        }
-    };
-    
-
-    // --- EVENT LISTENERS ---
-    addProcessBtn.addEventListener('click', () => {
-        processForm.reset();
-        openModal(processModal);
-    });
-
-    searchInput.addEventListener('input', renderProcesses);
-    
-    definirPrazoCheckbox.addEventListener('change', () => {
-        prazoFatalContainer.classList.toggle('hidden', !definirPrazoCheckbox.checked);
-    });
-    
-    processList.addEventListener('click', (e) => {
-        if (e.target.closest('.add-mov-btn')) {
-            const id = e.target.closest('.add-mov-btn').dataset.id;
-            document.getElementById('movimentacaoProcessId').value = id;
-            movimentacaoForm.reset();
-            prazoFatalContainer.classList.add('hidden');
-            openModal(movimentacaoModal);
+            fetchProcesses();
+        } catch(err) {
+            alert(`Erro ao adicionar movimentação: ${err.message}`);
         }
     });
     
@@ -437,31 +601,120 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
                 });
-                // Atualiza a cor sem recarregar tudo
-                e.target.className = `status-select bg-transparent font-semibold py-1 px-2 rounded-full ${statusColors[newStatus] || statusColors["N/D"]} border-0 focus:ring-0 appearance-none cursor-pointer`;
-                // Atualiza o dado localmente
+                // Apenas atualiza a cor, não precisa de refazer o fetch de tudo
                 const process = allProcesses.find(p => p.id == id);
                 if(process) process.status = newStatus;
-            } catch (error) {
-                alert('Falha ao atualizar o status. Tente novamente.');
-                fetchProcesses(); // Recarrega para reverter a mudança visual
+                renderProcesses();
+            } catch(err) {
+                alert(`Erro ao atualizar status: ${err.message}`);
             }
         }
     });
 
-    // --- FUNÇÕES DE MODAL ---
-    const openModal = (modal) => modal.style.display = 'flex';
-    const closeModal = (modal) => modal.style.display = 'none';
+    // --- LÓGICA DA PÁGINA DE GESTÃO ---
+    const fetchGestaoData = async () => {
+        gestaoPendentes.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+        gestaoExecucao.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+        gestaoSemana.innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+        
+        try {
+            const data = await apiRequest('/api/gestao');
+            
+            gestaoPendentes.innerHTML = data.pendentes.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum processo pendente.</p>';
+            gestaoExecucao.innerHTML = data.execucao.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum processo em execução.</p>';
+            gestaoSemana.innerHTML = data.semana.map(m => `
+                <div class="p-2 bg-gray-100 rounded text-sm">
+                    <p class="font-semibold">${m.numero}</p>
+                    <p>${m.descricao}</p>
+                    <p class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</p>
+                </div>
+            `).join('') || '<p class="text-sm text-gray-500">Nenhuma movimentação esta semana.</p>';
 
-    cancelBtn.addEventListener('click', () => closeModal(processModal));
-    cancelMovimentacaoBtn.addEventListener('click', () => closeModal(movimentacaoModal));
-    window.addEventListener('click', (e) => {
-        if (e.target == processModal) closeModal(processModal);
-        if (e.target == movimentacaoModal) closeModal(movimentacaoModal);
-    });
+            calendarEvents = data.calendario;
+            renderCalendar();
+
+        } catch(err) {
+             gestaoPendentes.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+             gestaoExecucao.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+             gestaoSemana.innerHTML = '<p class="text-sm text-red-500">Erro ao carregar dados.</p>';
+        }
+    };
     
+    // --- LÓGICA DO CALENDÁRIO ---
+    const renderCalendar = () => {
+        calendarContainer.innerHTML = '';
+        const month = calendarDate.getMonth();
+        const year = calendarDate.getFullYear();
+        
+        calendarMonthYear.textContent = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        
+        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon...
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid';
+
+        const dayHeaders = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        dayHeaders.forEach(day => {
+            const headerEl = document.createElement('div');
+            headerEl.className = 'text-center font-bold text-xs text-primary';
+            headerEl.textContent = day;
+            grid.appendChild(headerEl);
+        });
+
+        // Preenche os dias vazios no início
+        // Corrigido para o padrão brasileiro (início da semana na Segunda)
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'calendar-day';
+            const dayDate = new Date(year, month, day).toISOString().split('T')[0];
+
+            const audienciasDoDia = calendarEvents.audiencias.filter(a => a.date && a.date.startsWith(dayDate));
+            const prazosDoDia = calendarEvents.prazos.filter(p => p.date && p.date.startsWith(dayDate));
+            
+            let tooltipText = [];
+
+            let eventsHtml = '<div class="flex gap-1">';
+            if (audienciasDoDia.length > 0) {
+                eventsHtml += '<div class="event-dot event-audiencia"></div>';
+                tooltipText.push(`Audiências:\n${audienciasDoDia.map(a => `- ${a.numero}`).join('\n')}`);
+            }
+            if (prazosDoDia.length > 0) {
+                eventsHtml += '<div class="event-dot event-prazo"></div>';
+                tooltipText.push(`Prazos:\n${prazosDoDia.map(p => `- ${p.descricao} (${p.numero})`).join('\n')}`);
+            }
+            eventsHtml += '</div>';
+
+            dayEl.innerHTML = `<span class="day-number">${day}</span> ${eventsHtml}`;
+            if(tooltipText.length > 0) {
+                dayEl.title = tooltipText.join('\n\n');
+            }
+            
+            grid.appendChild(dayEl);
+        }
+        calendarContainer.appendChild(grid);
+    };
+
+    prevMonthBtn.addEventListener('click', () => {
+        calendarDate.setMonth(calendarDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        calendarDate.setMonth(calendarDate.getMonth() + 1);
+        renderCalendar();
+    });
+
     // --- INICIALIZAÇÃO ---
-    checkLogin();
+    if (sessionStorage.getItem('loggedIn') === 'true') {
+        showAppScreen();
+    } else {
+        showLoginScreen();
+    }
 });
 </script>
 </body>
