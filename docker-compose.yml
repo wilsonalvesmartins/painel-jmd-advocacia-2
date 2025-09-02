@@ -22,7 +22,6 @@ services:
     restart: unless-stopped
     depends_on:
       - db
-    # --- A CORREÇÃO ESTÁ AQUI ---
     # A API agora conhece as credenciais para se identificar na base de dados
     environment:
       POSTGRES_USER: jmd_user
