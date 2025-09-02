@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Serviço do Frontend (Nginx) que os utilizadores veem
+  # Serviço do Frontend (Nginx)
   webapp:
     build:
       context: .
@@ -13,7 +13,7 @@ services:
     networks:
       - jmd-network
 
-  # Serviço do Backend (API) que fala com a base de dados
+  # Serviço do Backend (API)
   api:
     build:
       context: ./api
@@ -24,7 +24,6 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Passa as credenciais para a API para que ela saiba como se conectar
       POSTGRES_USER: jmd_user
       POSTGRES_PASSWORD: superstrongpassword123
       POSTGRES_DB: jmd_processos
@@ -32,34 +31,29 @@ services:
     networks:
       - jmd-network
 
-  # Serviço da Base de Dados (PostgreSQL)
+  # Serviço da Base de Dados
   db:
     image: postgres:15-alpine
     container_name: jmd_database
     restart: unless-stopped
     environment:
-      # Define as credenciais que a base de dados irá usar ao ser criada
       POSTGRES_USER: jmd_user
       POSTGRES_PASSWORD: superstrongpassword123
       POSTGRES_DB: jmd_processos
     volumes:
-      # Garante que os dados da base de dados não se perdem
       - postgres_data:/var/lib/postgresql/data
     networks:
       - jmd-network
-    # Verifica se a base de dados está pronta antes de outros serviços dependerem dela
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jmd_user -d jmd_processos"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Define o volume para guardar os dados da base de dados
 volumes:
   postgres_data:
     driver: local
 
-# Define a rede privada para os serviços comunicarem
 networks:
   jmd-network:
     driver: bridge
