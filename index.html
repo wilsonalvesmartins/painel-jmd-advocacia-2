@@ -8,42 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 50;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            -webkit-backdrop-filter: blur(4px);
-            backdrop-filter: blur(4px);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 24px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 0.5rem;
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .hidden {
-            display: none;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 24px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .hidden { display: none; }
+        .nav-link { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
+        .nav-link.active { background-color: #4f46e5; color: white; }
+        .nav-link:not(.active) { color: #4b5563; }
+        .nav-link:not(.active):hover { background-color: #e0e7ff; }
     </style>
 </head>
 <body class="antialiased">
@@ -55,14 +29,14 @@
             <form id="loginForm">
                 <div class="mb-4">
                     <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
                 </div>
                 <div class="mb-6">
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Palavra-passe</label>
-                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
                 </div>
                 <p id="loginError" class="text-red-500 text-sm text-center mb-4 hidden">Utilizador ou palavra-passe inválidos.</p>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 transition-colors shadow">Entrar</button>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 shadow">Entrar</button>
             </form>
         </div>
     </div>
@@ -76,83 +50,89 @@
                         <h1 class="text-3xl font-bold text-gray-800">JMD Advocacia</h1>
                         <h2 class="text-xl font-semibold text-gray-600">Painel de Acompanhamento Processual</h2>
                     </div>
-                    <button id="logoutBtn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors shadow flex items-center gap-2">
-                        <i class="fa fa-sign-out-alt"></i>
-                        <span>Sair</span>
+                    <button id="logoutBtn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 shadow flex items-center gap-2">
+                        <i class="fa fa-sign-out-alt"></i><span>Sair</span>
                     </button>
                 </div>
-                <div class="w-full h-px bg-gray-200 mt-4"></div>
+                <!-- Navegação -->
+                <nav class="mt-6 flex items-center gap-2 bg-gray-200 p-1 rounded-lg">
+                    <a id="nav-processos" class="nav-link active">Painel de Processos</a>
+                    <a id="nav-gestao" class="nav-link">Gestão</a>
+                </nav>
             </div>
         </header>
 
         <main class="max-w-7xl mx-auto">
-            <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div class="relative w-full sm:w-auto flex-grow sm:flex-grow-0 sm:max-w-xs">
-                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input id="searchInput" type="text" placeholder="Procurar por nº do processo ou nome do cliente..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+            <!-- PÁGINA: PAINEL DE PROCESSOS -->
+            <div id="page-processos">
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div class="relative w-full sm:w-auto flex-grow sm:flex-grow-0 sm:max-w-xs">
+                        <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="searchInput" type="text" placeholder="Procurar por nº ou nome..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md">
+                    </div>
+                    <button id="addProcessBtn" class="bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 shadow flex items-center gap-2">
+                        <i class="fa fa-plus"></i><span>Novo Processo</span>
+                    </button>
                 </div>
-                <button id="addProcessBtn" class="bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-indigo-700 transition-colors shadow flex items-center gap-2">
-                    <i class="fa fa-plus"></i>
-                    <span>Novo Processo</span>
-                </button>
+                <div id="processList" class="space-y-4"></div>
+                <div id="loading-state" class="text-center py-10"><p class="text-gray-500 text-lg">A carregar processos...</p></div>
+                <div id="error-state" class="hidden text-center py-10 bg-red-50 border border-red-200 rounded-lg"><p id="errorMessage" class="text-red-600 font-semibold text-lg">Falha ao carregar processos.</p></div>
+                <div id="no-results" class="hidden text-center py-10"><p class="text-gray-500 text-lg">Nenhum processo encontrado.</p></div>
             </div>
 
-            <div id="processList" class="space-y-4">
-                <!-- Cards de processo serão inseridos aqui -->
-            </div>
-            <div id="loading-state" class="text-center py-10">
-                <p class="text-gray-500 text-lg">A carregar processos...</p>
-            </div>
-            <div id="error-state" class="hidden text-center py-10 bg-red-50 border border-red-200 rounded-lg">
-                <p id="errorMessage" class="text-red-600 font-semibold text-lg">Falha ao carregar processos. Verifique se a API está a funcionar corretamente.</p>
-            </div>
-            <div id="no-results" class="hidden text-center py-10">
-                <p class="text-gray-500 text-lg">Nenhum processo encontrado.</p>
+            <!-- PÁGINA: GESTÃO -->
+            <div id="page-gestao" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Coluna Pendentes de Manifestação -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Pendentes de Manifestação</h3>
+                        <div id="gestao-pendentes" class="space-y-3"></div>
+                    </div>
+                    <!-- Coluna Em Fase de Execução -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Em Fase de Execução</h3>
+                        <div id="gestao-execucao" class="space-y-3"></div>
+                    </div>
+                </div>
+                <!-- Movimentações da Semana -->
+                <div class="bg-white p-5 rounded-lg shadow-sm mt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Movimentações da Semana</h3>
+                    <div id="gestao-semana" class="space-y-3"></div>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Modal para Adicionar/Editar Processo -->
-    <div id="processModal" class="modal">
-        <div class="modal-content animate-fade-in">
-            <form id="processForm">
-                <h3 id="modalTitle" class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Processo</h3>
-                <input type="hidden" id="processId">
-                <div class="space-y-4">
-                    <div>
-                        <label for="numeroProcesso" class="block text-sm font-medium text-gray-700 mb-1">Número do Processo</label>
-                        <input type="text" id="numeroProcesso" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                    </div>
-                    <div>
-                        <label for="nomeCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-                        <input type="text" id="nomeCliente" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                    </div>
-                </div>
-                <div class="mt-8 flex justify-end gap-3">
-                    <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold transition">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition">Salvar Processo</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- MODAIS -->
+    <!-- Modal para Adicionar Processo -->
+    <div id="processModal" class="modal"><div class="modal-content animate-fade-in">
+        <form id="processForm">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Processo</h3>
+            <div class="space-y-4">
+                <div><label for="numeroProcesso" class="block text-sm font-medium text-gray-700 mb-1">Número do Processo</label><input type="text" id="numeroProcesso" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div>
+                <div><label for="nomeCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label><input type="text" id="nomeCliente" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div>
+            </div>
+            <div class="mt-8 flex justify-end gap-3">
+                <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Salvar Processo</button>
+            </div>
+        </form>
+    </div></div>
 
     <!-- Modal para Adicionar Movimentação -->
-    <div id="movimentacaoModal" class="modal">
-        <div class="modal-content animate-fade-in">
-            <form id="movimentacaoForm">
-                <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Movimentação</h3>
-                <input type="hidden" id="movimentacaoProcessId">
-                <div>
-                    <label for="movimentacaoDescricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição da Movimentação</label>
-                    <textarea id="movimentacaoDescricao" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea>
-                </div>
-                <div class="mt-8 flex justify-end gap-3">
-                    <button type="button" id="cancelMovimentacaoBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold transition">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold transition">Adicionar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div id="movimentacaoModal" class="modal"><div class="modal-content animate-fade-in">
+        <form id="movimentacaoForm">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Movimentação</h3>
+            <input type="hidden" id="movimentacaoProcessId">
+            <div><label for="movimentacaoDescricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label><textarea id="movimentacaoDescricao" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea></div>
+            <div class="mt-4"><label class="flex items-center"><input type="checkbox" id="definirPrazo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded"> <span class="ml-2 text-sm text-gray-700">Definir prazo fatal</span></label></div>
+            <div id="prazoFatalContainer" class="mt-4 hidden"><label for="prazoFatal" class="block text-sm font-medium text-gray-700 mb-1">Data do Prazo</label><input type="date" id="prazoFatal" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+            <div class="mt-8 flex justify-end gap-3">
+                <button type="button" id="cancelMovimentacaoBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">Adicionar</button>
+            </div>
+        </form>
+    </div></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -163,30 +143,67 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
     
+    const pageProcessos = document.getElementById('page-processos');
+    const pageGestao = document.getElementById('page-gestao');
+    const navProcessos = document.getElementById('nav-processos');
+    const navGestao = document.getElementById('nav-gestao');
+
     const addProcessBtn = document.getElementById('addProcessBtn');
     const processModal = document.getElementById('processModal');
     const processForm = document.getElementById('processForm');
     const processList = document.getElementById('processList');
-    const modalTitle = document.getElementById('modalTitle');
     const cancelBtn = document.getElementById('cancelBtn');
     
     const movimentacaoModal = document.getElementById('movimentacaoModal');
     const movimentacaoForm = document.getElementById('movimentacaoForm');
     const cancelMovimentacaoBtn = document.getElementById('cancelMovimentacaoBtn');
+    const definirPrazoCheckbox = document.getElementById('definirPrazo');
+    const prazoFatalContainer = document.getElementById('prazoFatalContainer');
 
     const searchInput = document.getElementById('searchInput');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
     const noResults = document.getElementById('no-results');
+    const errorMessage = document.getElementById('errorMessage');
 
     let allProcesses = [];
+    const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
+    const statusColors = {
+        "Distribuído": "bg-blue-100 text-blue-800",
+        "Pendente de manifestação": "bg-yellow-100 text-yellow-800",
+        "Aguardando Audiência": "bg-purple-100 text-purple-800",
+        "Sentença": "bg-green-100 text-green-800",
+        "Recurso": "bg-orange-100 text-orange-800",
+        "Liquidação": "bg-teal-100 text-teal-800",
+        "Em fase de execução": "bg-pink-100 text-pink-800",
+        "N/D": "bg-gray-100 text-gray-800"
+    };
 
-    // --- LÓGICA DE AUTENTICAÇÃO ---
+    // --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+    const navigateTo = (page) => {
+        if (page === 'processos') {
+            pageProcessos.classList.remove('hidden');
+            pageGestao.classList.add('hidden');
+            navProcessos.classList.add('active');
+            navGestao.classList.remove('active');
+            fetchProcesses();
+        } else if (page === 'gestao') {
+            pageProcessos.classList.add('hidden');
+            pageGestao.classList.remove('hidden');
+            navProcessos.classList.remove('active');
+            navGestao.classList.add('active');
+            fetchGestaoData();
+        }
+    };
+
+    navProcessos.addEventListener('click', () => navigateTo('processos'));
+    navGestao.addEventListener('click', () => navigateTo('gestao'));
+
     const checkLogin = () => {
         if (sessionStorage.getItem('loggedIn') === 'true') {
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
-            fetchProcesses();
+            navigateTo('processos');
         } else {
             loginScreen.classList.remove('hidden');
             appScreen.classList.add('hidden');
@@ -197,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-
         if (username === 'escritorio' && password === '36672456') {
             sessionStorage.setItem('loggedIn', 'true');
             loginError.classList.add('hidden');
@@ -212,206 +228,242 @@ document.addEventListener('DOMContentLoaded', () => {
         checkLogin();
     });
 
-    // --- FUNÇÕES DA API ---
-    const fetchProcesses = async () => {
-        showLoading();
+    // --- LÓGICA DE API ---
+    const apiRequest = async (url, options = {}) => {
         try {
-            const response = await fetch('/api/processes');
+            const response = await fetch(url, options);
             if (!response.ok) {
-                throw new Error('Falha na rede ou na API');
+                const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+                throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
             }
-            allProcesses = await response.json();
-            renderProcesses();
+            return response.json();
         } catch (error) {
-            console.error('Erro ao procurar processos:', error);
-            showError();
+            console.error('Erro na API:', error);
+            errorMessage.textContent = `Falha na comunicação com a API. Verifique a consola para mais detalhes. (${error.message})`;
+            loadingState.classList.add('hidden');
+            errorState.classList.remove('hidden');
+            throw error;
         }
     };
 
-    const saveProcess = async (processData) => {
-        try {
-            const response = await fetch('/api/processes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(processData),
-            });
-            if (!response.ok) throw new Error('Falha ao salvar processo');
-            await fetchProcesses();
-            closeProcessModal();
-        } catch (error) {
-            console.error('Erro ao salvar processo:', error);
-            alert('Não foi possível salvar o processo. Tente novamente.');
-        }
-    };
-
-    const addMovement = async (processId, description) => {
-        try {
-            const response = await fetch(`/api/processes/${processId}/movimentacoes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ description }),
-            });
-            if (!response.ok) throw new Error('Falha ao adicionar movimentação');
-            await fetchProcesses();
-            closeMovimentacaoModal();
-        } catch (error) {
-            console.error('Erro ao adicionar movimentação:', error);
-            alert('Não foi possível adicionar a movimentação. Tente novamente.');
-        }
-    };
-
-    // --- RENDERIZAÇÃO E UI ---
-    const showLoading = () => {
+    // --- LÓGICA DE PROCESSOS ---
+    const fetchProcesses = async () => {
         loadingState.classList.remove('hidden');
         errorState.classList.add('hidden');
         noResults.classList.add('hidden');
-        processList.classList.add('hidden');
-    };
-    
-    const showError = () => {
-        loadingState.classList.add('hidden');
-        errorState.classList.remove('hidden');
-        noResults.classList.add('hidden');
-        processList.classList.add('hidden');
-    };
-    
-    const showNoResults = () => {
-        loadingState.classList.add('hidden');
-        errorState.classList.add('hidden');
-        noResults.classList.remove('hidden');
-        processList.classList.add('hidden');
-    };
-
-    const showContent = () => {
-        loadingState.classList.add('hidden');
-        errorState.classList.add('hidden');
-        noResults.classList.add('hidden');
-        processList.classList.remove('hidden');
-    };
-
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        return new Date(dateString).toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const renderProcesses = () => {
         processList.innerHTML = '';
+        try {
+            allProcesses = await apiRequest('/api/processes');
+            loadingState.classList.add('hidden');
+            renderProcesses();
+        } catch (error) {
+            // A mensagem de erro já é tratada em apiRequest
+        }
+    };
+    
+    const renderProcesses = () => {
         const searchTerm = searchInput.value.toLowerCase();
-        
         const filteredProcesses = allProcesses.filter(p => 
-            p.numero.toLowerCase().includes(searchTerm) ||
+            p.numero.toLowerCase().includes(searchTerm) || 
             p.cliente.toLowerCase().includes(searchTerm)
         );
 
-        if (allProcesses.length > 0 && filteredProcesses.length === 0) {
-            showNoResults();
-        } else if (filteredProcesses.length > 0) {
-            showContent();
+        processList.innerHTML = '';
+        if (filteredProcesses.length === 0) {
+            noResults.classList.remove('hidden');
         } else {
-             // Se não há processos no total, a mensagem de "nenhum processo" é diferente
-            noResults.innerHTML = '<p class="text-gray-500 text-lg">Ainda não há processos registados. Clique em "Novo Processo" para começar.</p>';
-            showNoResults();
+            noResults.classList.add('hidden');
         }
-
+        
         filteredProcesses.sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated));
 
         filteredProcesses.forEach(p => {
-            const lastMovement = p.movimentacoes && p.movimentacoes.length > 0 
-                ? p.movimentacoes[p.movimentacoes.length - 1]
-                : { timestamp: p.created_at, description: 'Processo criado' };
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500 transition hover:shadow-lg';
+            
+            const statusColor = statusColors[p.status || "N/D"] || statusColors["N/D"];
+            
+            const statusDropdown = `
+                <select class="status-select bg-transparent font-semibold py-1 px-2 rounded-full ${statusColor} border-0 focus:ring-0 appearance-none cursor-pointer" data-id="${p.id}">
+                    ${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+            `;
 
-            let movementsHtml = 'Nenhuma movimentação registada.';
-            if (p.movimentacoes && p.movimentacoes.length > 0) {
-                movementsHtml = `<ul class="space-y-2 list-disc list-inside text-gray-600">` +
-                    p.movimentacoes.slice().reverse().map(m => 
-                        `<li><span class="font-semibold text-gray-800">${formatDate(m.timestamp)}:</span> ${m.description}</li>`
-                    ).join('') + `</ul>`;
-            }
-
-            const card = `
-                <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-indigo-500 transition hover:shadow-lg">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div class="flex-grow">
-                            <h3 class="text-xl font-bold text-gray-800">${p.numero}</h3>
-                            <p class="text-md font-semibold text-gray-700">${p.cliente}</p>
-                            <p class="text-sm text-gray-500 mt-1">Última atualização: ${formatDate(lastMovement.timestamp)}</p>
+            card.innerHTML = `
+                <div class="flex flex-wrap justify-between items-start gap-4">
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-2">
+                           ${statusDropdown}
                         </div>
-                        <div class="flex-shrink-0">
-                             <button class="add-movimentacao-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600 transition-colors text-sm" data-id="${p.id}">+ Movimentação</button>
-                        </div>
+                        <h3 class="text-xl font-bold text-gray-800">${p.numero}</h3>
+                        <p class="text-md font-semibold text-gray-700">${p.cliente}</p>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <p class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações:</p>
-                        ${movementsHtml}
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <button class="add-mov-btn text-green-600 hover:text-green-800 h-9 w-9 grid place-content-center rounded-full hover:bg-gray-100" data-id="${p.id}" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4>
+                    <div class="space-y-2">
+                        ${(p.movimentacoes && p.movimentacoes.length > 0) ? p.movimentacoes.slice(0, 3).map(mov => `
+                            <div class="p-2 rounded-md bg-gray-50">
+                                <p class="text-sm text-gray-800">${mov.descricao}</p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-xs text-gray-500">${new Date(mov.timestamp).toLocaleString('pt-BR')}</span>
+                                    ${mov.prazo_fatal ? `<span class="text-xs font-semibold text-red-600 flex items-center gap-1"><i class="far fa-calendar-times"></i> Prazo: ${new Date(mov.prazo_fatal).toLocaleDateString('pt-BR')}</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-sm text-gray-500">Nenhuma movimentação registada.</p>'}
                     </div>
                 </div>
             `;
-            processList.innerHTML += card;
+            processList.appendChild(card);
         });
     };
 
-    // --- MODAIS ---
-    const openProcessModal = () => {
-        processForm.reset();
-        modalTitle.textContent = 'Adicionar Novo Processo';
-        processModal.style.display = 'flex';
-    };
-    const closeProcessModal = () => processModal.style.display = 'none';
-
-    const openMovimentacaoModal = (processId) => {
-        movimentacaoForm.reset();
-        document.getElementById('movimentacaoProcessId').value = processId;
-        movimentacaoModal.style.display = 'flex';
-    };
-    const closeMovimentacaoModal = () => movimentacaoModal.style.display = 'none';
-
-    // --- EVENT LISTENERS ---
-    addProcessBtn.addEventListener('click', openProcessModal);
-    cancelBtn.addEventListener('click', closeProcessModal);
-    cancelMovimentacaoBtn.addEventListener('click', closeMovimentacaoModal);
-
-    window.addEventListener('click', (e) => {
-        if (e.target == processModal) closeProcessModal();
-        if (e.target == movimentacaoModal) closeMovimentacaoModal();
+    processForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const numero = document.getElementById('numeroProcesso').value;
+        const cliente = document.getElementById('nomeCliente').value;
+        try {
+            await apiRequest('/api/processes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numero, cliente })
+            });
+            closeModal(processModal);
+            fetchProcesses();
+        } catch(error) { /* já tratado */ }
     });
     
+    movimentacaoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('movimentacaoProcessId').value;
+        const descricao = document.getElementById('movimentacaoDescricao').value;
+        const prazo_fatal = definirPrazoCheckbox.checked ? document.getElementById('prazoFatal').value : null;
+
+        try {
+            await apiRequest(`/api/processes/${id}/movimentacoes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descricao, prazo_fatal })
+            });
+            closeModal(movimentacaoModal);
+            if (pageProcessos.classList.contains('hidden')) {
+                fetchGestaoData();
+            } else {
+                fetchProcesses();
+            }
+        } catch(error) { /* já tratado */ }
+    });
+
+    // --- LÓGICA DE GESTÃO ---
+    const fetchGestaoData = async () => {
+        const pendentesContainer = document.getElementById('gestao-pendentes');
+        const execucaoContainer = document.getElementById('gestao-execucao');
+        const semanaContainer = document.getElementById('gestao-semana');
+
+        pendentesContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
+        execucaoContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
+        semanaContainer.innerHTML = `<p class="text-gray-500">A carregar...</p>`;
+
+        try {
+            const data = await apiRequest('/api/gestao');
+
+            // Renderiza Pendentes de Manifestação
+            pendentesContainer.innerHTML = data.pendentes.length > 0 ? data.pendentes.map(p => `
+                <div class="p-2 rounded-md bg-yellow-50 border border-yellow-200">
+                    <p class="font-semibold text-sm text-gray-800">${p.numero}</p>
+                    <p class="text-xs text-gray-600">${p.cliente}</p>
+                </div>
+            `).join('') : '<p class="text-sm text-gray-500">Nenhum processo pendente.</p>';
+            
+            // Renderiza Em Fase de Execução
+            execucaoContainer.innerHTML = data.execucao.length > 0 ? data.execucao.map(p => `
+                <div class="p-2 rounded-md bg-pink-50 border border-pink-200">
+                    <p class="font-semibold text-sm text-gray-800">${p.numero}</p>
+                    <p class="text-xs text-gray-600">${p.cliente}</p>
+                </div>
+            `).join('') : '<p class="text-sm text-gray-500">Nenhum processo em execução.</p>';
+
+            // Renderiza Movimentações da Semana
+            semanaContainer.innerHTML = data.semana.length > 0 ? data.semana.map(m => `
+                <div class="p-2 rounded-md bg-gray-50">
+                    <p class="text-sm"><span class="font-bold">${m.numero}</span>: ${m.descricao}</p>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>
+                         ${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600 flex items-center gap-1"><i class="far fa-calendar-times"></i> Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR')}</span>` : ''}
+                    </div>
+                </div>
+            `).join('') : '<p class="text-sm text-gray-500">Nenhuma movimentação esta semana.</p>';
+
+        } catch (error) {
+             pendentesContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
+             execucaoContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
+             semanaContainer.innerHTML = `<p class="text-red-500">Erro ao carregar dados.</p>`;
+        }
+    };
+    
+
+    // --- EVENT LISTENERS ---
+    addProcessBtn.addEventListener('click', () => {
+        processForm.reset();
+        openModal(processModal);
+    });
+
     searchInput.addEventListener('input', renderProcesses);
-
-    processForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const processData = {
-            numero: document.getElementById('numeroProcesso').value,
-            cliente: document.getElementById('nomeCliente').value,
-        };
-        saveProcess(processData);
+    
+    definirPrazoCheckbox.addEventListener('change', () => {
+        prazoFatalContainer.classList.toggle('hidden', !definirPrazoCheckbox.checked);
     });
-
-    movimentacaoForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const processId = document.getElementById('movimentacaoProcessId').value;
-        const description = document.getElementById('movimentacaoDescricao').value;
-        addMovement(processId, description);
-    });
-
+    
     processList.addEventListener('click', (e) => {
-        const addBtn = e.target.closest('.add-movimentacao-btn');
-        if (addBtn) {
-            const processId = addBtn.dataset.id;
-            openMovimentacaoModal(processId);
+        if (e.target.closest('.add-mov-btn')) {
+            const id = e.target.closest('.add-mov-btn').dataset.id;
+            document.getElementById('movimentacaoProcessId').value = id;
+            movimentacaoForm.reset();
+            prazoFatalContainer.classList.add('hidden');
+            openModal(movimentacaoModal);
+        }
+    });
+    
+    processList.addEventListener('change', async (e) => {
+        if (e.target.classList.contains('status-select')) {
+            const id = e.target.dataset.id;
+            const newStatus = e.target.value;
+            try {
+                await apiRequest(`/api/processes/${id}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                // Atualiza a cor sem recarregar tudo
+                e.target.className = `status-select bg-transparent font-semibold py-1 px-2 rounded-full ${statusColors[newStatus] || statusColors["N/D"]} border-0 focus:ring-0 appearance-none cursor-pointer`;
+                // Atualiza o dado localmente
+                const process = allProcesses.find(p => p.id == id);
+                if(process) process.status = newStatus;
+            } catch (error) {
+                alert('Falha ao atualizar o status. Tente novamente.');
+                fetchProcesses(); // Recarrega para reverter a mudança visual
+            }
         }
     });
 
+    // --- FUNÇÕES DE MODAL ---
+    const openModal = (modal) => modal.style.display = 'flex';
+    const closeModal = (modal) => modal.style.display = 'none';
+
+    cancelBtn.addEventListener('click', () => closeModal(processModal));
+    cancelMovimentacaoBtn.addEventListener('click', () => closeModal(movimentacaoModal));
+    window.addEventListener('click', (e) => {
+        if (e.target == processModal) closeModal(processModal);
+        if (e.target == movimentacaoModal) closeModal(movimentacaoModal);
+    });
+    
     // --- INICIALIZAÇÃO ---
     checkLogin();
 });
 </script>
-
 </body>
 </html>
 
