@@ -50,17 +50,12 @@ const initializeDatabase = async () => {
                 links JSONB DEFAULT '[]',
                 area_direito VARCHAR(100),
                 tribunal VARCHAR(255),
-                vara VARCHAR(255)
+                vara VARCHAR(255),
+                modo_audiencia VARCHAR(100),
+                link_audiencia VARCHAR(512)
             );
         `);
         console.log('Tabela "processes" verificada/criada com sucesso.');
-
-        // Adiciona novas colunas para V4
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS modo_audiencia VARCHAR(100);");
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS link_audiencia VARCHAR(512);");
-
-        console.log('Colunas da V4 (modo e link da audiência) verificadas/adicionadas.');
-
     } catch (err) {
         console.error('Erro ao inicializar o banco de dados:', err);
     } finally {
@@ -89,8 +84,8 @@ app.get('/api/processes', async (req, res) => {
         let paramIndex = params.length + 1;
 
         if (vara) {
-            conditions.push(`vara = $${paramIndex++}`);
-            params.push(vara);
+            conditions.push(`vara ILIKE $${paramIndex++}`);
+            params.push(`%${vara}%`);
         }
         if (search) {
              conditions.push(`(numero ILIKE $${paramIndex} OR cliente ILIKE $${paramIndex})`);
@@ -148,6 +143,22 @@ app.put('/api/processes/:id', async (req, res) => {
         res.status(500).json({ message: 'Erro ao atualizar processo.' });
     }
 });
+
+// Deletar um processo
+app.delete('/api/processes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM processes WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Processo não encontrado.' });
+        }
+        res.status(204).send(); // No Content
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao deletar processo.' });
+    }
+});
+
 
 // Adicionar uma nova movimentação a um processo
 app.post('/api/processes/:id/movimentacoes', async (req, res) => {
@@ -306,16 +317,20 @@ app.get('/api/gestao', async (req, res) => {
 // Rota para o Calendário
 app.get('/api/calendario', async (req, res) => {
     try {
-        const audienciasRes = await pool.query("SELECT numero, cliente, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL");
+        const audienciasRes = await pool.query("SELECT numero, cliente, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL ORDER BY proxima_audiencia ASC");
         const prazosRes = await pool.query(`
             SELECT p.numero, p.cliente, mov.prazo_fatal as date, mov.descricao
             FROM processes p, jsonb_to_recordset(p.movimentacoes) AS mov(descricao text, prazo_fatal date, concluido boolean)
             WHERE mov.prazo_fatal IS NOT NULL AND mov.concluido = false
         `);
+        const proximasAudienciasRes = await pool.query("SELECT id, numero, cliente, proxima_audiencia FROM processes WHERE proxima_audiencia >= CURRENT_DATE ORDER BY proxima_audiencia ASC LIMIT 5");
 
         res.json({
-            audiencias: audienciasRes.rows,
-            prazos: prazosRes.rows
+            eventos: {
+                audiencias: audienciasRes.rows,
+                prazos: prazosRes.rows
+            },
+            proximasAudiencias: proximasAudienciasRes.rows
         });
     } catch (err) {
          console.error("Erro ao buscar dados do calendário:", err);
