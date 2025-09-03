@@ -8,7 +8,7 @@ app.use(express.json());
 
 const PORT = 3000;
 
-// Configuração da conexão com o PostgreSQL usando a variável de ambiente do Docker Compose
+// Configuração da conexão com o PostgreSQL
 let pool;
 const connectWithRetry = () => {
     pool = new Pool({
@@ -29,7 +29,7 @@ const connectWithRetry = () => {
         } else {
             console.log('Conectado com sucesso ao PostgreSQL!');
             initializeDb();
-            release();
+            if(release) release();
         }
     });
 };
@@ -39,49 +39,65 @@ connectWithRetry();
 
 
 const initializeDb = async () => {
+    const client = await pool.connect();
     try {
-        // CORREÇÃO CRÍTICA: Cria a tabela principal se ela não existir.
-        await pool.query(`
+        await client.query('BEGIN');
+
+        await client.query(`
             CREATE TABLE IF NOT EXISTS processes (
                 id SERIAL PRIMARY KEY,
                 numero VARCHAR(255) NOT NULL,
                 cliente VARCHAR(255) NOT NULL,
                 movimentacoes JSONB DEFAULT '[]',
-                created_at TIMESTAMPTZ DEFAULT NOW()
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                status VARCHAR(255),
+                proxima_audiencia DATE,
+                links JSONB DEFAULT '[]',
+                tribunal VARCHAR(255),
+                vara VARCHAR(255)
             );
         `);
-
-        // Verifica e adiciona novas colunas à tabela processes se não existirem
-        await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS status VARCHAR(255)');
-        await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia DATE');
-        await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS links JSONB DEFAULT \'[]\'');
-        await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS tribunal VARCHAR(255)');
-        await pool.query('ALTER TABLE processes ADD COLUMN IF NOT EXISTS vara VARCHAR(255)');
         
-        // Cria a tabela de configurações se não existir
-        await pool.query(`
+        await client.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB
             );
         `);
 
+        // Garante que as colunas existem antes de as usar
+        const columns = await client.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'settings' AND column_name = 'value';
+        `);
+        if (columns.rows.length > 0) {
+            // Garante que a configuração de links exista
+             await client.query(`
+                INSERT INTO settings (key, value)
+                VALUES ('office_settings', '{"logo_url": "", "custom_menu_links": []}')
+                ON CONFLICT (key) DO NOTHING;
+            `);
+        }
+        
+        await client.query('COMMIT');
         console.log('Tabelas "processes" e "settings" verificadas/criadas com sucesso.');
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Erro ao inicializar o banco de dados:', err.stack);
+    } finally {
+        client.release();
     }
 };
 
-// --- ROTAS DE CONFIGURAÇÕES ---
+// --- ROTAS DE CONFIGURAções ---
 
-// Obter configurações
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
         if (result.rows.length > 0) {
             res.json(result.rows[0].value);
         } else {
-            res.json({ logo_url: '' }); // Retorna um objeto padrão se não houver configurações
+            res.json({ logo_url: '', custom_menu_links: [] });
         }
     } catch (err) {
         console.error(err);
@@ -89,16 +105,24 @@ app.get('/api/settings', async (req, res) => {
     }
 });
 
-// Salvar/Atualizar configurações
 app.post('/api/settings', async (req, res) => {
-    const { logo_url } = req.body;
+    const { logo_url, custom_menu_links } = req.body;
     try {
+        // Obter configurações existentes para não sobrescrever
+        const existingSettingsRes = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
+        const existingSettings = existingSettingsRes.rows.length > 0 ? existingSettingsRes.rows[0].value : {};
+
+        const newSettings = {
+            logo_url: logo_url !== undefined ? logo_url : existingSettings.logo_url,
+            custom_menu_links: custom_menu_links !== undefined ? custom_menu_links : existingSettings.custom_menu_links
+        };
+        
         await pool.query(`
             INSERT INTO settings (key, value) 
             VALUES ($1, $2) 
             ON CONFLICT (key) 
             DO UPDATE SET value = $2;
-        `, ['office_settings', { logo_url }]);
+        `, ['office_settings', newSettings]);
         res.status(200).json({ message: 'Configurações salvas com sucesso.' });
     } catch (err) {
         console.error(err);
@@ -108,6 +132,7 @@ app.post('/api/settings', async (req, res) => {
 
 
 // --- ROTAS DE PROCESSOS ---
+// (As rotas de processos existentes permanecem as mesmas)
 
 // Obter todos os processos com filtros
 app.get('/api/processes', async (req, res) => {
@@ -292,7 +317,6 @@ app.get('/api/gestao', async (req, res) => {
         res.status(500).json({ message: 'Erro ao buscar dados de gestão.' });
     }
 });
-
 
 app.listen(PORT, () => {
     console.log(`API a funcionar na porta ${PORT}`);
