@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Processos v5 - JMD Advocacia</title>
+    <title>Painel de Processos v6 - JMD Advocacia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -110,9 +110,9 @@
                 <div><label for="areaDireito" class="block text-sm font-medium text-gray-700 mb-1">Área do Direito</label><select id="areaDireito" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">Selecione...</option><option value="Trabalhista">Trabalhista</option><option value="Cível">Cível</option><option value="Família">Família</option></select></div>
                 <div><label for="tribunal" class="block text-sm font-medium text-gray-700 mb-1">Tribunal</label><input type="text" id="tribunal" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                 <div><label for="vara" class="block text-sm font-medium text-gray-700 mb-1">Vara</label><input type="text" id="vara" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                 <div><label for="proximaAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Data da Audiência</label><input type="date" id="proximaAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                 <div><label for="modoAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Modo da Audiência</label><select id="modoAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">Nenhum</option><option value="Online">Online</option><option value="Presencial">Presencial</option></select></div>
-                 <div id="linkAudienciaContainer" class="hidden"><label for="linkAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Link da Audiência</label><input type="url" id="linkAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div><label for="proximaAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Data e Hora da Audiência</label><input type="datetime-local" id="proximaAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div><label for="modoAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Modo da Audiência</label><select id="modoAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">Nenhum</option><option value="Online">Online</option><option value="Presencial">Presencial</option></select></div>
+                <div id="linkAudienciaContainer" class="hidden md:col-span-2"><label for="linkAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Link da Audiência</label><input type="url" id="linkAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
             </div>
             <div id="editExtraFields" class="hidden mt-4"><hr class="my-4"><h4 class="text-md font-medium text-gray-700 mb-2">Links de Documentos</h4><div id="linksList" class="space-y-2 mb-2"></div><div class="flex gap-2"><input type="url" id="newLinkUrl" placeholder="URL do documento" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md"><input type="text" id="newLinkDesc" placeholder="Descrição (Ex: Petição Inicial)" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md"><button type="button" id="addLinkBtn" class="bg-blue-500 text-white px-3 rounded-md hover:bg-blue-600"><i class="fa fa-plus"></i></button></div></div>
             <div class="mt-8 flex justify-end gap-3"><button type="button" data-modal-close class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Cancelar</button><button type="submit" class="px-4 py-2 bg-primary text-white rounded-md hover:opacity-90 font-semibold">Salvar</button></div>
@@ -208,13 +208,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('loading-state').classList.remove('hidden');
         document.getElementById('processList').innerHTML = '';
         try {
-            const selectedTribunais = Array.from(document.querySelectorAll('#tribunalList input:checked')).map(cb => cb.value);
+            const todosCheckbox = document.querySelector('#tribunalList input[value="Todos"]');
+            let selectedTribunais = [];
+            if (todosCheckbox && !todosCheckbox.checked) {
+                selectedTribunais = Array.from(document.querySelectorAll('#tribunalList input:checked:not([value="Todos"])')).map(cb => cb.value);
+            }
+
             const params = new URLSearchParams({
                 search: document.getElementById('searchInput').value,
-                tribunal: selectedTribunais.join(','),
                 vara: document.getElementById('varaSearchInput').value
-            }).toString();
-            allProcesses = await apiRequest(`/processes?${params}`);
+            });
+            if (selectedTribunais.length > 0) {
+                 params.set('tribunal', selectedTribunais.join(','));
+            }
+
+            allProcesses = await apiRequest(`/processes?${params.toString()}`);
             renderProcesses();
         } catch (error) {
             document.getElementById('error-state').classList.remove('hidden');
@@ -240,8 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
                            <span class="text-xs font-semibold py-1 px-2 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
                            ${p.modo_audiencia === 'Online' && p.link_audiencia ? `<a href="${p.link_audiencia}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200"><i class="fa fa-video mr-1"></i>Link Audiência</a>` : ''}
                         </div>
-                        <h3 class="text-xl font-bold text-primary">${p.numero}</h3>
-                        <p class="text-md text-gray-700">${p.cliente}</p>
+                        <h3 class="text-xl font-bold text-primary">${p.cliente}</h3>
+                        <p class="text-md text-gray-700">${p.numero}</p>
                         <p class="text-sm text-gray-500 mt-1">${p.tribunal || ''} - ${p.vara || ''}</p>
                     </div>
                     <div class="flex-shrink-0 flex items-center gap-2">
@@ -306,7 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('areaDireito').value = process.area_direito || '';
             document.getElementById('tribunal').value = process.tribunal || '';
             document.getElementById('vara').value = process.vara || '';
-            document.getElementById('proximaAudiencia').value = process.proxima_audiencia ? new Date(process.proxima_audiencia).toISOString().split('T')[0] : '';
+            if (process.proxima_audiencia) {
+                const date = new Date(process.proxima_audiencia);
+                // Formata para YYYY-MM-DDTHH:mm, considerando o fuso horário local
+                const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                document.getElementById('proximaAudiencia').value = localISOString;
+            }
             document.getElementById('modoAudiencia').value = process.modo_audiencia || '';
             document.getElementById('linkAudiencia').value = process.link_audiencia || '';
             document.getElementById('editExtraFields').classList.remove('hidden');
@@ -346,7 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('movimentacaoEditForm').addEventListener('submit', async (e) => { e.preventDefault(); const processId = document.getElementById('movimentacaoEditProcessId').value; const movId = document.getElementById('movimentacaoEditId').value; const data = { descricao: document.getElementById('movimentacaoEditDescricao').value, concluido: document.getElementById('movimentacaoEditConcluido').checked }; await apiRequest(`/processes/${processId}/movimentacoes/${movId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); closeModal(movimentacaoEditModal); fetchProcesses(); });
     document.getElementById('processList').addEventListener('change', async e => { if (e.target.classList.contains('status-select')) { const id = e.target.dataset.id; const newStatus = e.target.value; await apiRequest(`/processes/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }); fetchProcesses(); }});
     
-    // Lógica de Links (corrigida)
     const renderLinks = (links = []) => { const list = document.getElementById('linksList'); list.innerHTML = links.map(link => `<div class="flex items-center justify-between bg-gray-100 p-2 rounded"><a href="${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline truncate" title="${link.url}"><i class="fas fa-link mr-2"></i>${link.descricao}</a><button type="button" data-link-id="${link.id}" class="delete-link-btn text-red-500 hover:text-red-700 text-xs p-1"><i class="fas fa-trash"></i></button></div>`).join('') || '<p class="text-xs text-gray-500">Nenhum link adicionado.</p>'; };
     document.getElementById('addLinkBtn').addEventListener('click', async () => { const urlInput = document.getElementById('newLinkUrl'); const descInput = document.getElementById('newLinkDesc'); if (!urlInput.value || !descInput.value) { alert('URL e descrição são obrigatórios.'); return; } const updatedProcess = await apiRequest(`/processes/${currentProcessId}/links`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput.value, descricao: descInput.value }) }); renderLinks(updatedProcess.links); const index = allProcesses.findIndex(p => p.id == currentProcessId); if(index !== -1) allProcesses[index] = updatedProcess; urlInput.value = ''; descInput.value = ''; });
     document.getElementById('linksList').addEventListener('click', async e => { const deleteBtn = e.target.closest('.delete-link-btn'); if (deleteBtn && confirm('Tem a certeza?')) { const updatedProcess = await apiRequest(`/processes/${currentProcessId}/links/${deleteBtn.dataset.linkId}`, { method: 'DELETE' }); renderLinks(updatedProcess.links); const index = allProcesses.findIndex(p => p.id == currentProcessId); if(index !== -1) allProcesses[index] = updatedProcess; }});
@@ -364,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderProximasAudiencias(data.proximasAudiencias);
         } catch (error) { document.getElementById('calendar-container').innerHTML = '<p class="text-red-500">Erro ao carregar eventos.</p>'; }
     };
-    const renderProximasAudiencias = (audiencias) => { const list = document.getElementById('proximas-audiencias-list'); list.innerHTML = audiencias.map(a => `<div class="p-2 bg-gray-100 rounded text-sm flex justify-between items-center"><span><span class="font-bold">${a.numero}</span> - ${new Date(a.proxima_audiencia).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</span><button class="text-xs bg-primary text-white px-2 py-1 rounded hover:opacity-80" onclick="navigateTo('processos'); document.getElementById('searchInput').value='${a.numero}'; fetchProcesses();">Ver Processo</button></div>`).join('') || '<p class="text-sm text-gray-500">Nenhuma audiência marcada para os próximos dias.</p>'};
+    const renderProximasAudiencias = (audiencias) => { const list = document.getElementById('proximas-audiencias-list'); list.innerHTML = audiencias.map(a => `<div class="p-2 bg-gray-100 rounded text-sm flex justify-between items-center"><span><span class="font-bold">${a.cliente}</span> - ${new Date(a.proxima_audiencia).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span><button class="text-xs bg-primary text-white px-2 py-1 rounded hover:opacity-80" onclick="navigateTo('processos'); document.getElementById('searchInput').value='${a.numero}'; fetchProcesses();">Ver Processo</button></div>`).join('') || '<p class="text-sm text-gray-500">Nenhuma audiência marcada para os próximos dias.</p>'};
     const renderCalendar = (events = { audiencias: [], prazos: [] }) => {
         const calendarContainer = document.getElementById('calendar-container'); calendarContainer.innerHTML = ''; const month = calendarDate.getMonth(); const year = calendarDate.getFullYear(); document.getElementById('calendar-month-year').textContent = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); const firstDayOfMonth = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const grid = document.createElement('div'); grid.className = 'calendar-grid'; ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(day => { const h = document.createElement('div'); h.className = 'text-center font-bold text-xs text-primary'; h.textContent = day; grid.appendChild(h); });
         for (let i = 0; i < firstDayOfMonth; i++) { grid.appendChild(document.createElement('div')); }
@@ -372,8 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayEl = document.createElement('div'); dayEl.className = 'calendar-day'; const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const audienciasDoDia = events.audiencias.filter(a => a.date && a.date.startsWith(dayDateStr)); const prazosDoDia = events.prazos.filter(p => p.date && p.date.startsWith(dayDateStr));
             let eventsHtml = `<span class="day-number">${day}</span>`;
-            audienciasDoDia.forEach(a => { eventsHtml += `<div class="calendar-event event-audiencia">${a.numero}</div>`});
-            prazosDoDia.forEach(p => { eventsHtml += `<div class="calendar-event event-prazo">${p.numero}</div>`});
+            audienciasDoDia.forEach(a => { eventsHtml += `<div class="calendar-event event-audiencia">${a.cliente}</div>`});
+            prazosDoDia.forEach(p => { eventsHtml += `<div class="calendar-event event-prazo">${p.cliente}</div>`});
             dayEl.innerHTML = eventsHtml;
             grid.appendChild(dayEl);
         }
