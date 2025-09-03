@@ -3,255 +3,272 @@ const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
+const port = 3000;
+
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3000;
-
+// --- CONFIGURAÇÃO DA CONEXÃO COM O BANCO DE DADOS ---
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-async function initializeDb() {
+// --- FUNÇÃO PARA CONECTAR COM TENTATIVAS ---
+const connectWithRetry = async (retries = 5, delay = 5000) => {
+    while (retries > 0) {
+        try {
+            await pool.connect();
+            console.log('Conectado com sucesso ao PostgreSQL!');
+            return;
+        } catch (err) {
+            retries--;
+            console.error('Falha ao conectar ao PostgreSQL:', err.message);
+            if (retries > 0) {
+                console.log(`Tentativas restantes: ${retries}. Tentando novamente em ${delay / 1000} segundos...`);
+                await new Promise(res => setTimeout(res, delay));
+            } else {
+                console.error('Não foi possível conectar ao banco de dados após várias tentativas. A API não será iniciada.');
+                process.exit(1);
+            }
+        }
+    }
+};
+
+// --- FUNÇÃO PARA INICIALIZAR E ATUALIZAR O BANCO DE DADOS ---
+const initializeDatabase = async () => {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        // Cria a tabela principal se não existir
         await client.query(`
             CREATE TABLE IF NOT EXISTS processes (
                 id SERIAL PRIMARY KEY,
                 numero VARCHAR(255) NOT NULL,
                 cliente VARCHAR(255) NOT NULL,
+                status VARCHAR(100) DEFAULT 'Distribuído',
                 movimentacoes JSONB DEFAULT '[]',
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                status VARCHAR(255),
-                proxima_audiencia DATE,
-                links JSONB DEFAULT '[]',
-                tribunal VARCHAR(255),
-                vara VARCHAR(255),
-                area VARCHAR(255)
+                last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS settings (
-                key VARCHAR(255) PRIMARY KEY,
-                value JSONB
-            );
-        `);
-        await client.query(`
-            INSERT INTO settings (key, value)
-            VALUES ('office_settings', '{"logo_url": "", "custom_menu_links": []}')
-            ON CONFLICT (key) DO NOTHING;
-        `);
-        await client.query('COMMIT');
-        console.log('Tabelas "processes" e "settings" verificadas/criadas com sucesso.');
+        console.log('Tabela "processes" verificada/criada com sucesso.');
+
+        // Adiciona novas colunas se elas não existirem (para atualizações futuras)
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia DATE;");
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]';");
+        console.log('Colunas "proxima_audiencia" e "links" verificadas/adicionadas.');
+
     } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Erro ao inicializar o banco de dados:', err.stack);
-        throw err;
+        console.error('Erro ao inicializar o banco de dados:', err);
     } finally {
         client.release();
     }
-}
+};
 
-async function startServer() {
-    let retries = 5;
-    while (retries) {
-        try {
-            const client = await pool.connect();
-            console.log('Conectado com sucesso ao PostgreSQL!');
-            client.release();
-            await initializeDb();
-            break; 
-        } catch (err) {
-            console.error('Falha ao conectar ou inicializar o DB:', err.message);
-            retries -= 1;
-            console.log(`Tentativas restantes: ${retries}`);
-            if (retries === 0) {
-                 console.error('Não foi possível conectar ao banco de dados após várias tentativas. A API não será iniciada.');
-                 process.exit(1);
-            }
-            await new Promise(res => setTimeout(res, 5000));
-        }
+
+// --- ROTAS DA API ---
+
+// Obter todos os processos
+app.get('/api/processes', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM processes ORDER BY last_updated DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao buscar processos.' });
     }
-    
-    app.use((req, res, next) => {
-        console.log(`[${new Date().toISOString()}] Recebido pedido: ${req.method} ${req.originalUrl}`);
-        next();
-    });
+});
 
-    app.get('/api/health', (req, res) => {
-        res.status(200).json({ status: 'ok', message: 'API está a funcionar' });
-    });
-    
-    // --- ROTAS DE CONFIGURAÇÕES ---
-    app.get('/api/settings', async (req, res) => {
-        try {
-            const result = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
-            if (result.rows.length > 0) {
-                res.json(result.rows[0].value);
-            } else {
-                const defaultValue = { logo_url: '', custom_menu_links: [] };
-                await pool.query(`INSERT INTO settings (key, value) VALUES ('office_settings', $1)`, [JSON.stringify(defaultValue)]);
-                res.json(defaultValue);
+// Criar um novo processo
+app.post('/api/processes', async (req, res) => {
+    const { numero, cliente } = req.body;
+    if (!numero || !cliente) {
+        return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
+    }
+    try {
+        const result = await pool.query(
+            'INSERT INTO processes (numero, cliente) VALUES ($1, $2) RETURNING *',
+            [numero, cliente]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao criar processo.' });
+    }
+});
+
+// Atualizar informações de um processo (número, cliente, audiência)
+app.put('/api/processes/:id', async (req, res) => {
+    const { id } = req.params;
+    const { numero, cliente, proxima_audiencia } = req.body;
+     if (!numero || !cliente) {
+        return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
+    }
+    try {
+        const result = await pool.query(
+            'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, last_updated = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+            [numero, cliente, proxima_audiencia || null, id]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao atualizar processo.' });
+    }
+});
+
+
+// Adicionar uma nova movimentação a um processo
+app.post('/api/processes/:id/movimentacoes', async (req, res) => {
+    const { id } = req.params;
+    const { descricao, prazo_fatal } = req.body;
+
+    if (!descricao) {
+        return res.status(400).json({ message: 'A descrição da movimentação é obrigatória.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN'); // Inicia transação
+
+        const novaMovimentacao = {
+            descricao,
+            timestamp: new Date().toISOString(),
+            prazo_fatal: prazo_fatal || null
+        };
+        
+        let query = 'UPDATE processes SET movimentacoes = movimentacoes || $1::jsonb, last_updated = CURRENT_TIMESTAMP';
+        const params = [JSON.stringify(novaMovimentacao)];
+
+        // Lógica corrigida: Se houver prazo fatal, muda o status para "Pendente de manifestação"
+        if (prazo_fatal) {
+            query += ", status = 'Pendente de manifestação'";
+        }
+
+        query += ' WHERE id = $2 RETURNING *';
+        params.push(id);
+
+        const result = await client.query(query, params);
+
+        await client.query('COMMIT'); // Finaliza transação
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Processo não encontrado.' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao adicionar movimentação.' });
+    } finally {
+        client.release();
+    }
+});
+
+// Atualizar o status de um processo
+app.put('/api/processes/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) {
+        return res.status(400).json({ message: 'O novo status é obrigatório.' });
+    }
+    try {
+        const result = await pool.query(
+            'UPDATE processes SET status = $1, last_updated = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+            [status, id]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao atualizar status do processo.' });
+    }
+});
+
+// Adicionar um link a um processo
+app.post('/api/processes/:id/links', async (req, res) => {
+    const { id } = req.params;
+    const { url, descricao } = req.body;
+    if(!url || !descricao) return res.status(400).json({ message: 'URL e descrição são obrigatórios.' });
+
+    const novoLink = { id: Date.now(), url, descricao };
+    try {
+        const result = await pool.query(
+            `UPDATE processes SET links = links || $1::jsonb, last_updated = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+            [JSON.stringify(novoLink), id]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao adicionar link.' });
+    }
+});
+
+// Remover um link de um processo
+app.delete('/api/processes/:id/links/:linkId', async (req, res) => {
+    const { id, linkId } = req.params;
+    try {
+        // Pega os links atuais, filtra o que será removido e atualiza o campo
+        const linksAtuais = await pool.query('SELECT links FROM processes WHERE id = $1', [id]);
+        if (linksAtuais.rows.length === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
+        
+        const linksFiltrados = linksAtuais.rows[0].links.filter(link => link.id != linkId);
+
+        const result = await pool.query(
+            'UPDATE processes SET links = $1, last_updated = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+            [JSON.stringify(linksFiltrados), id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao remover link.' });
+    }
+});
+
+
+// Rota para a página de Gestão
+app.get('/api/gestao', async (req, res) => {
+    try {
+        const pendentesRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Pendente de manifestação' ORDER BY last_updated DESC");
+        const execucaoRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Em fase de execução' ORDER BY last_updated DESC");
+        const semanaRes = await pool.query(`
+            SELECT p.numero, mov.*
+            FROM processes p, jsonb_to_recordset(p.movimentacoes) AS mov(descricao text, timestamp timestamptz, prazo_fatal date)
+            WHERE mov.timestamp >= DATE_TRUNC('week', NOW())
+            ORDER BY mov.timestamp DESC;
+        `);
+        // Busca de dados para o calendário
+        const audienciasRes = await pool.query("SELECT numero, cliente, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL");
+        const prazosRes = await pool.query(`
+            SELECT p.numero, p.cliente, mov.prazo_fatal as date, mov.descricao
+            FROM processes p, jsonb_to_recordset(p.movimentacoes) AS mov(descricao text, prazo_fatal date)
+            WHERE mov.prazo_fatal IS NOT NULL
+        `);
+        
+        res.json({
+            pendentes: pendentesRes.rows,
+            execucao: execucaoRes.rows,
+            semana: semanaRes.rows,
+            calendario: {
+                audiencias: audienciasRes.rows,
+                prazos: prazosRes.rows
             }
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao obter configurações.' });
-        }
-    });
+        });
 
-    app.post('/api/settings', async (req, res) => {
-        const { logo_url, custom_menu_links } = req.body;
-        try {
-            const existingSettingsRes = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
-            const existingSettings = existingSettingsRes.rows.length > 0 ? existingSettingsRes.rows[0].value : {};
-            const newSettings = {
-                logo_url: logo_url !== undefined ? logo_url : existingSettings.logo_url,
-                custom_menu_links: custom_menu_links !== undefined ? custom_menu_links : existingSettings.custom_menu_links
-            };
-            await pool.query(`INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2;`, ['office_settings', newSettings]);
-            res.status(200).json({ message: 'Configurações salvas com sucesso.' });
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao salvar configurações.' });
-        }
-    });
+    } catch (err) {
+        console.error("Erro ao buscar dados de gestão:", err);
+        res.status(500).json({ message: "Erro ao buscar dados para a página de gestão." });
+    }
+});
 
-    // --- ROTAS DE PROCESSOS ---
-    app.get('/api/processes', async (req, res) => {
-        try {
-            let baseQuery = 'SELECT * FROM processes';
-            const params = [];
-            const conditions = [];
-            if (req.query.tribunal && req.query.tribunal !== 'Todos') {
-                params.push(req.query.tribunal);
-                conditions.push(`tribunal = $${params.length}`);
-            }
-            if (req.query.vara) {
-                params.push(`%${req.query.vara}%`);
-                conditions.push(`vara ILIKE $${params.length}`);
-            }
-            if (conditions.length > 0) {
-                baseQuery += ` WHERE ${conditions.join(' AND ')}`;
-            }
-            baseQuery += ' ORDER BY created_at DESC';
-            const result = await pool.query(baseQuery, params);
-            res.json(result.rows);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao buscar processos.' });
-        }
-    });
 
-    app.post('/api/processes', async (req, res) => {
-        const { numero, cliente, tribunal, vara, area } = req.body;
-        if (!numero || !cliente || !area) {
-            return res.status(400).json({ message: 'Número, cliente e área são obrigatórios.' });
-        }
-        try {
-            const result = await pool.query(
-                'INSERT INTO processes (numero, cliente, status, tribunal, vara, area) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-                [numero, cliente, 'Distribuído', tribunal, vara, area]
-            );
-            res.status(201).json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao criar processo.' });
-        }
+// --- INICIALIZAÇÃO DO SERVIDOR ---
+const startServer = async () => {
+    await connectWithRetry();
+    await initializeDatabase();
+    app.listen(port, () => {
+        console.log(`API a funcionar na porta ${port}`);
     });
+};
 
-    app.put('/api/processes/:id', async (req, res) => {
-        const { id } = req.params;
-        const { numero, cliente, proxima_audiencia, tribunal, vara, area } = req.body;
-        try {
-            const result = await pool.query(
-                'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, tribunal = $4, vara = $5, area = $6 WHERE id = $7 RETURNING *',
-                [numero, cliente, proxima_audiencia || null, tribunal, vara, area, id]
-            );
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao atualizar processo.' });
-        }
-    });
-
-    app.post('/api/processes/:id/movimentacoes', async (req, res) => {
-        const { id } = req.params;
-        const { descricao, prazo_fatal } = req.body;
-        const newMovimentacao = { id: Date.now(), descricao, timestamp: new Date(), prazo_fatal: prazo_fatal || null, };
-        try {
-            let query = 'UPDATE processes SET movimentacoes = movimentacoes || $1::jsonb';
-            const params = [JSON.stringify(newMovimentacao)];
-            if (prazo_fatal) {
-                query += ', status = $2';
-                params.push('Pendente de manifestação');
-            }
-            query += ' WHERE id = $' + (params.length + 1) + ' RETURNING *';
-            params.push(id);
-            const result = await pool.query(query, params);
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao adicionar movimentação.' });
-        }
-    });
-
-    app.put('/api/processes/:id/status', async (req, res) => {
-        const { id } = req.params;
-        const { status } = req.body;
-        try {
-            const result = await pool.query('UPDATE processes SET status = $1 WHERE id = $2 RETURNING *', [status, id]);
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao atualizar status.' });
-        }
-    });
-
-    app.post('/api/processes/:id/links', async (req, res) => {
-        const { id } = req.params;
-        const { url, descricao } = req.body;
-        const newLink = { id: Date.now(), url, descricao };
-        try {
-            const result = await pool.query('UPDATE processes SET links = links || $1::jsonb WHERE id = $2 RETURNING *', [JSON.stringify(newLink), id] );
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao adicionar link.' });
-        }
-    });
-
-    app.delete('/api/processes/:processId/links/:linkId', async (req, res) => {
-        const { processId, linkId } = req.params;
-        try {
-            const processResult = await pool.query('SELECT links FROM processes WHERE id = $1', [processId]);
-            if (processResult.rows.length === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
-            const links = processResult.rows[0].links || [];
-            const updatedLinks = links.filter(link => link.id != linkId);
-            const result = await pool.query('UPDATE processes SET links = $1 WHERE id = $2 RETURNING *', [JSON.stringify(updatedLinks), processId]);
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Erro ao remover link.' });
-        }
-    });
-
-    // --- ROTA DE GESTÃO ---
-    app.get('/api/gestao', async (req, res) => {
-        try {
-            const pendentesRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Pendente de manifestação'");
-            const execucaoRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Em fase de execução'");
-            const semanaRes = await pool.query(`SELECT p.numero, m.* FROM processes p, jsonb_to_recordset(p.movimentacoes) as m(descricao text, timestamp timestamptz) WHERE m.timestamp >= date_trunc('week', CURRENT_DATE) ORDER BY m.timestamp DESC`);
-            const audienciasRes = await pool.query("SELECT numero, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL");
-            const prazosRes = await pool.query(`SELECT p.numero, m.descricao, m.prazo_fatal as date FROM processes p, jsonb_to_recordset(p.movimentacoes) as m(descricao text, prazo_fatal date) WHERE m.prazo_fatal IS NOT NULL`);
-            res.json({ pendentes: pendentesRes.rows, execucao: execucaoRes.rows, semana: semanaRes.rows, calendario: { audiencias: audienciasRes.rows, prazos: prazosRes.rows } });
-        } catch (err) {
-            console.error('Erro ao buscar dados de gestão:', err);
-            res.status(500).json({ message: 'Erro ao buscar dados de gestão.' });
-        }
-    });
-    
-    startServer();
-}
+startServer();
 
