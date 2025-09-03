@@ -46,7 +46,7 @@ const initializeDatabase = async () => {
                 status VARCHAR(100) DEFAULT 'Distribuído',
                 movimentacoes JSONB DEFAULT '[]',
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                proxima_audiencia DATE,
+                proxima_audiencia_old DATE, -- Coluna antiga para migração
                 links JSONB DEFAULT '[]',
                 area_direito VARCHAR(100),
                 tribunal VARCHAR(255),
@@ -56,6 +56,29 @@ const initializeDatabase = async () => {
             );
         `);
         console.log('Tabela "processes" verificada/criada com sucesso.');
+        
+        // Adiciona a nova coluna de timestamp se não existir
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia TIMESTAMP WITH TIME ZONE;");
+
+        // Bloco de migração de dados: DATE -> TIMESTAMP WITH TIME ZONE
+        // Apenas para compatibilidade com dados existentes na V5
+        try {
+            // Copia dados da coluna antiga (DATE) para a nova (TIMESTAMP), se a antiga existir
+            await client.query(`
+                UPDATE processes 
+                SET proxima_audiencia = proxima_audiencia_old::TIMESTAMP 
+                WHERE proxima_audiencia_old IS NOT NULL AND proxima_audiencia IS NULL;
+            `);
+             // Remove a coluna antiga após a migração bem-sucedida
+            await client.query("ALTER TABLE processes DROP COLUMN IF EXISTS proxima_audiencia_old;");
+            console.log('Migração de data da audiência para timestamp concluída.');
+        } catch(e) {
+            // Ignora erros se a coluna antiga não existir, o que é esperado em novas instalações
+            if (!e.message.includes("column \"proxima_audiencia_old\" does not exist")) {
+                 console.error("Erro durante a migração da data de audiência (pode ser ignorado em novas instalações):", e.message);
+            }
+        }
+
     } catch (err) {
         console.error('Erro ao inicializar o banco de dados:', err);
     } finally {
@@ -74,7 +97,7 @@ app.get('/api/processes', async (req, res) => {
         const conditions = [];
         const params = [];
 
-        if (tribunal && tribunal !== 'Todos') {
+        if (tribunal && tribunal !== 'Todos' && tribunal.length > 0) {
             const tribunais = tribunal.split(',');
             const a = tribunais.map((t, i) => `$${i + 1}`).join(',');
             conditions.push(`tribunal IN (${a})`);
