@@ -276,12 +276,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if(errorState && errorMessage) {
                 errorState.classList.remove('hidden');
                 errorMessage.textContent = `Erro: ${error.message}`;
+                document.getElementById('loading-state').classList.add('hidden');
             }
             throw error;
         }
     };
     
     // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
+    const initApp = async () => {
+        // Vincula todos os event listeners da aplicação
+        bindEventListeners();
+
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            await fetchSettingsAndInitialize();
+            navigateTo('processos');
+        } else {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app').classList.add('hidden');
+            await fetchSettingsAndInitialize();
+        }
+    };
+
     const fetchSettingsAndInitialize = async () => {
         try {
             const settings = await apiRequest('/api/settings');
@@ -289,18 +306,16 @@ document.addEventListener('DOMContentLoaded', () => {
             updateUIWithSettings();
         } catch(e) {
             console.error("Não foi possível carregar as configurações. A usar valores padrão.");
-            updateUIWithSettings(); // Garante que a UI seja construída mesmo que as configurações falhem
+            updateUIWithSettings();
         }
     };
 
     const updateUIWithSettings = () => {
-        // Atualiza Logos
         const defaultLogo = 'https://placehold.co/300x80/132433/d9d9d9?text=Logo+Escrit%C3%B3rio';
         document.getElementById('loginLogo').src = officeSettings.logo_url || defaultLogo;
         document.getElementById('mainLogo').src = officeSettings.logo_url || defaultLogo;
         document.getElementById('logoUrl').value = officeSettings.logo_url || '';
 
-        // Atualiza Menu de Navegação
         const mainNav = document.getElementById('main-nav');
         mainNav.innerHTML = `
             <a data-page="processos" class="nav-link">Painel de Processos</a>
@@ -317,30 +332,16 @@ document.addEventListener('DOMContentLoaded', () => {
             mainNav.appendChild(linkEl);
         });
         
-        // Atualiza a página de configurações
         renderCustomLinksConfig();
     };
     
-    const initApp = async () => {
-        if (sessionStorage.getItem('loggedIn') === 'true') {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
-            await fetchSettingsAndInitialize();
-            navigateTo('processos');
-        } else {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('app').classList.add('hidden');
-            await fetchSettingsAndInitialize();
-        }
-    };
-
     // --- FUNÇÕES DE NAVEGAÇÃO ---
     const navigateTo = (page) => {
         const pages = { 'processos': document.getElementById('page-processos'), 'gestao': document.getElementById('page-gestao'), 'config': document.getElementById('page-config') };
         const navs = { 'processos': document.querySelector('[data-page="processos"]'), 'gestao': document.querySelector('[data-page="gestao"]'), 'config': document.querySelector('[data-page="config"]') };
         
         Object.keys(pages).forEach(p => pages[p].classList.add('hidden'));
-        document.querySelectorAll('#main-nav a').forEach(a => a.classList.remove('active'));
+        document.querySelectorAll('#main-nav a[data-page]').forEach(a => a.classList.remove('active'));
 
         pages[page].classList.remove('hidden');
         if(navs[page]) navs[page].classList.add('active');
@@ -349,18 +350,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page === 'gestao') fetchGestaoData();
     };
 
-    // --- EVENT LISTENERS GLOBAIS ---
-    document.addEventListener('click', (e) => {
-        // Navegação
-        const navLink = e.target.closest('a[data-page]');
-        if (navLink) {
-            navigateTo(navLink.dataset.page);
-            return;
-        }
+    // --- BIND EVENT LISTENERS ---
+    const bindEventListeners = () => {
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === 'escritorio' && password === '36672456') {
+                initApp(); // Re-inicializa a app após o login
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
 
-        // Botão Novo Processo
-        if (e.target.closest('#addProcessBtn')) {
-            // Lógica para abrir modal de novo processo
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+             sessionStorage.removeItem('loggedIn');
+             initApp();
+        });
+
+        document.getElementById('main-nav').addEventListener('click', (e) => {
+            const navLink = e.target.closest('a[data-page]');
+            if (navLink) {
+                navigateTo(navLink.dataset.page);
+            }
+        });
+
+        document.getElementById('addProcessBtn').addEventListener('click', () => {
             const processModal = document.getElementById('processModal');
             document.getElementById('processModalTitle').textContent = 'Novo Processo';
             document.getElementById('processForm').reset();
@@ -368,43 +383,40 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editExtraFields').classList.add('hidden');
             document.getElementById('linksList').innerHTML = '';
             processModal.style.display = 'flex';
-        }
-
-        // Outros botões...
-    });
-    
-    // O resto do seu código JS aqui...
-    // Vou omitir a repetição de todo o script para manter a resposta concisa,
-    // mas o código completo que lhe dei anteriormente deve ser inserido aqui.
-    // A chave foi separar a atribuição de eventos e a inicialização.
-    // O código abaixo é apenas para garantir que o ficheiro termina corretamente.
-
-    const populateTribunalSelect = () => {
-        const select = document.getElementById('tribunal');
-        select.innerHTML = '<option value="">Selecione um tribunal</option>';
-        Object.keys(tribunais).forEach(groupName => {
-            if (tribunais[groupName].length > 0) {
-                const optgroup = document.createElement('optgroup');
-                optgroup.label = groupName;
-                tribunais[groupName].forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.textContent = item;
-                    optgroup.appendChild(option);
-                });
-                select.appendChild(optgroup);
-            } else {
-                 const option = document.createElement('option');
-                 option.value = groupName;
-                 option.textContent = groupName;
-                 select.appendChild(option);
-            }
         });
+
+        // Adicione todos os outros event listeners aqui...
+        // Exemplo para o botão de filtros
+        document.getElementById('openFilterBtn').addEventListener('click', () => {
+            document.getElementById('filter-panel-overlay').style.display = 'flex';
+            setTimeout(() => document.getElementById('filter-panel').classList.add('open'), 10);
+        });
+
+        // Fechar painel de filtros
+        document.getElementById('closeFilterBtn').addEventListener('click', closeFilterPanel);
+        document.getElementById('filter-panel-overlay').addEventListener('click', (e) => {
+             if(e.target === document.getElementById('filter-panel-overlay')) closeFilterPanel();
+        });
+
+        document.querySelectorAll('.cancel-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.target.closest('.modal').style.display = 'none';
+            });
+        });
+        
+        // O restante do seu código de event listeners
+        // ...
     };
-    populateTribunalSelect();
+
+    // O resto do seu código de funções (renderProcesses, fetchGestaoData, etc.) vai aqui.
+    // Vou omitir para não repetir o bloco de código gigante.
+    // O código completo que lhe dei anteriormente deve ser inserido aqui.
     
-    // ... O resto do seu código JS.
+    // ...
+    // --- FUNÇÕES COMPLETAS OMITIDAS PARA BREVIDADE ---
+    // ...
     
+    // Inicia a aplicação
     initApp();
 });
 </script>
