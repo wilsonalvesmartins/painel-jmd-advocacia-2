@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Processos v4 - JMD Advocacia</title>
+    <title>Painel de Processos v5 - JMD Advocacia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -19,13 +19,14 @@
         .nav-link:not(.active) { color: #132433; }
         .nav-link:not(.active):hover { background-color: #ffffff; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.8rem; position: relative; }
-        .day-number { font-size: 0.9rem; }
-        .event-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; }
-        .event-audiencia { background-color: #3b82f6; }
-        .event-prazo { background-color: #ef4444; } /* Cor do prazo alterada para vermelho */
+        .calendar-day { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.8rem; position: relative; min-height: 100px; }
+        .day-number { font-size: 0.9rem; margin-bottom: 4px; }
+        .calendar-event { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .event-audiencia { background-color: #3b82f6; color: white; }
+        .event-prazo { background-color: #ef4444; color: white; }
         .movimentacao-item.concluida { text-decoration: line-through; opacity: 0.6; }
-        #tribunalFilterModal { max-height: 80vh; overflow-y: auto; }
+        #tribunalFilterModal .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
+        #tribunalList { overflow-y: auto; }
     </style>
      <script>
         tailwind.config = {
@@ -82,6 +83,9 @@
             <!-- PÁGINA: CALENDÁRIO -->
             <div id="page-calendario" class="hidden">
                  <div class="bg-white p-5 rounded-lg shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-primary mb-4">Próximas Audiências</h3>
+                    <div id="proximas-audiencias-list" class="space-y-2 mb-6"></div>
+                    <hr class="mb-6">
                     <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-primary">Calendário de Eventos</h3><div class="flex items-center gap-4 text-sm"><span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Audiências</span><span class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div> Prazos</span></div></div>
                     <div class="flex items-center justify-between mb-4"><button id="prevMonthBtn" class="p-2 rounded-full hover:bg-gray-200"><i class="fas fa-chevron-left"></i></button><h4 id="calendar-month-year" class="text-lg font-semibold text-primary"></h4><button id="nextMonthBtn" class="p-2 rounded-full hover:bg-gray-200"><i class="fas fa-chevron-right"></i></button></div>
                     <div id="calendar-container"></div>
@@ -105,7 +109,7 @@
                 <div><label for="nomeCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label><input type="text" id="nomeCliente" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></div>
                 <div><label for="areaDireito" class="block text-sm font-medium text-gray-700 mb-1">Área do Direito</label><select id="areaDireito" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">Selecione...</option><option value="Trabalhista">Trabalhista</option><option value="Cível">Cível</option><option value="Família">Família</option></select></div>
                 <div><label for="tribunal" class="block text-sm font-medium text-gray-700 mb-1">Tribunal</label><input type="text" id="tribunal" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                <div><label for="vara" class="block text-sm font-medium text-gray-700 mb-1">Vara</label><select id="vara" class="w-full px-3 py-2 border border-gray-300 rounded-md"></select></div>
+                <div><label for="vara" class="block text-sm font-medium text-gray-700 mb-1">Vara</label><input type="text" id="vara" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                  <div><label for="proximaAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Data da Audiência</label><input type="date" id="proximaAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                  <div><label for="modoAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Modo da Audiência</label><select id="modoAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">Nenhum</option><option value="Online">Online</option><option value="Presencial">Presencial</option></select></div>
                  <div id="linkAudienciaContainer" class="hidden"><label for="linkAudiencia" class="block text-sm font-medium text-gray-700 mb-1">Link da Audiência</label><input type="url" id="linkAudiencia" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div>
@@ -127,35 +131,27 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DA UI ---
-    const loginScreen = document.getElementById('login-screen');
-    const appScreen = document.getElementById('app');
-    const loginForm = document.getElementById('loginForm');
-    
-    // Navegação
     const pages = { processos: document.getElementById('page-processos'), gestao: document.getElementById('page-gestao'), calendario: document.getElementById('page-calendario'), config: document.getElementById('page-config') };
     const navLinks = { processos: document.getElementById('nav-processos'), gestao: document.getElementById('nav-gestao'), calendario: document.getElementById('nav-calendario'), config: document.getElementById('nav-config') };
-
-    // Filtros
-    const searchInput = document.getElementById('searchInput');
-    const tribunalFilterBtn = document.getElementById('tribunalFilterBtn');
-    const varaSearchInput = document.getElementById('varaSearchInput');
-    
-    // Modais
     const processModal = document.getElementById('processModal');
     const movimentacaoModal = document.getElementById('movimentacaoModal');
     const movimentacaoEditModal = document.getElementById('movimentacaoEditModal');
     const tribunalFilterModal = document.getElementById('tribunalFilterModal');
     
-    // Forms
-    const processForm = document.getElementById('processForm');
-    
     let allProcesses = [];
+    let currentProcessId = null; // Para gerir o ID do processo no modal de edição
     let calendarDate = new Date();
-    const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
-    const varasPorArea = {
-        'Trabalhista': ['1ª Vara do Trabalho', '2ª Vara do Trabalho', '3ª Vara do Trabalho', '4ª Vara do Trabalho', 'Posto Avançado'],
-        'Cível': ['1ª Vara Cível', '2ª Vara Cível', '3ª Vara Cível', '4ª Vara Cível', 'Juizado Especial Cível'],
-        'Família': ['1ª Vara da Família', '2ª Vara da Família', 'Vara da Infância e Juventude']
+    const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução", "Encerrado"];
+    const statusColors = {
+        "Distribuído": "bg-blue-100 text-blue-800",
+        "Pendente de manifestação": "bg-yellow-100 text-yellow-800",
+        "Aguardando Audiência": "bg-purple-100 text-purple-800",
+        "Sentença": "bg-green-100 text-green-800",
+        "Recurso": "bg-orange-100 text-orange-800",
+        "Liquidação": "bg-teal-100 text-teal-800",
+        "Em fase de execução": "bg-pink-100 text-pink-800",
+        "Encerrado": "bg-gray-200 text-gray-800",
+        "default": "bg-gray-100 text-gray-800"
     };
     const tribunais = ['STF', 'STJ', 'TST', 'TJs', 'TRFs', 'TRTs', 'TSE', 'TREs', 'STM', 'TJMs', 'TCU'];
 
@@ -174,6 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- LÓGICA DE AUTENTICAÇÃO E INICIALIZAÇÃO ---
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app');
     const showLoginScreen = () => { loginScreen.classList.remove('hidden'); appScreen.classList.add('hidden'); sessionStorage.removeItem('loggedIn'); };
     const showAppScreen = () => { loginScreen.classList.add('hidden'); appScreen.classList.remove('hidden'); sessionStorage.setItem('loggedIn', 'true'); navigateTo('processos'); };
     
@@ -188,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populateTribunalFilter();
     };
 
-    loginForm.addEventListener('submit', (e) => { e.preventDefault(); if (document.getElementById('username').value === 'escritorio' && document.getElementById('password').value === '36672456') showAppScreen(); else document.getElementById('loginError').classList.remove('hidden'); });
+    document.getElementById('loginForm').addEventListener('submit', (e) => { e.preventDefault(); if (document.getElementById('username').value === 'escritorio' && document.getElementById('password').value === '36672456') showAppScreen(); else document.getElementById('loginError').classList.remove('hidden'); });
     document.getElementById('logoutBtn').addEventListener('click', showLoginScreen);
     
     // --- LÓGICA DE NAVEGAÇÃO ---
@@ -212,9 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const selectedTribunais = Array.from(document.querySelectorAll('#tribunalList input:checked')).map(cb => cb.value);
             const params = new URLSearchParams({
-                search: searchInput.value,
+                search: document.getElementById('searchInput').value,
                 tribunal: selectedTribunais.join(','),
-                vara: varaSearchInput.value
+                vara: document.getElementById('varaSearchInput').value
             }).toString();
             allProcesses = await apiRequest(`/processes?${params}`);
             renderProcesses();
@@ -233,13 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
         allProcesses.forEach(p => {
             const card = document.createElement('div');
             card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-primary transition hover:shadow-lg';
+            const statusColor = statusColors[p.status] || statusColors.default;
             card.innerHTML = `
                 <div class="flex flex-wrap justify-between items-start gap-4">
                     <div class="flex-grow cursor-pointer" data-action="edit-process" data-id="${p.id}">
                         <div class="flex items-center flex-wrap gap-2 mb-2">
                            <span class="text-xs font-semibold py-1 px-2 rounded-full bg-gray-200 text-gray-800">${p.area_direito || 'N/A'}</span>
-                           <span class="text-xs font-semibold py-1 px-2 rounded-full bg-blue-100 text-blue-800">${p.status || 'Não definido'}</span>
-                           ${p.modo_audiencia === 'Online' && p.link_audiencia ? `<a href="${p.link_audiencia}" target="_blank" class="text-xs font-semibold py-1 px-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200"><i class="fa fa-video mr-1"></i>Link Audiência</a>` : ''}
+                           <span class="text-xs font-semibold py-1 px-2 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
+                           ${p.modo_audiencia === 'Online' && p.link_audiencia ? `<a href="${p.link_audiencia}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200"><i class="fa fa-video mr-1"></i>Link Audiência</a>` : ''}
                         </div>
                         <h3 class="text-xl font-bold text-primary">${p.numero}</h3>
                         <p class="text-md text-gray-700">${p.cliente}</p>
@@ -248,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex-shrink-0 flex items-center gap-2">
                         <select data-id="${p.id}" class="status-select text-sm border-gray-300 rounded-md">${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select>
                         <button data-id="${p.id}" data-action="add-movimentacao" class="bg-primary text-white h-9 w-9 grid place-content-center rounded-full hover:opacity-90" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
+                        <button data-id="${p.id}" data-action="delete-process" class="bg-red-600 text-white h-9 w-9 grid place-content-center rounded-full hover:bg-red-700" title="Excluir Processo"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4><div class="space-y-2 text-sm">
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    [searchInput, varaSearchInput].forEach(el => el.addEventListener('input', fetchProcesses));
+    [document.getElementById('searchInput'), document.getElementById('varaSearchInput')].forEach(el => el.addEventListener('input', fetchProcesses));
 
     // --- LÓGICA DOS MODAIS (Abrir/Fechar) ---
     const openModal = (modalElement) => modalElement.style.display = 'flex';
@@ -266,26 +266,39 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => { if (e.target.classList.contains('modal')) closeModal(e.target); });
 
     // --- LÓGICA DE AÇÕES ---
-    document.getElementById('processList').addEventListener('click', e => {
+    document.getElementById('processList').addEventListener('click', async e => {
         const target = e.target.closest('[data-action]');
         if (!target) return;
-        const { action, id, processId, movId } = target.dataset;
-        const process = allProcesses.find(p => p.id == (id || processId));
+        const { action, id } = target.dataset;
+        if (action === 'delete-process') {
+            if (confirm(`Tem a certeza que quer excluir o processo? Esta ação não pode ser desfeita.`)) {
+                await apiRequest(`/processes/${id}`, { method: 'DELETE' });
+                fetchProcesses();
+            }
+            return;
+        }
+        if (action === 'add-movimentacao') { openMovimentacaoModal(id); return; }
+        
+        const process = allProcesses.find(p => p.id == (id || target.dataset.processId));
+        if (!process) return;
+
         switch (action) {
-            case 'edit-process': if(process) openProcessModal(process); break;
-            case 'add-movimentacao': openMovimentacaoModal(id); break;
-            case 'edit-movimentacao': if(process) { const mov = process.movimentacoes.find(m => m.id == movId); if(mov) openMovimentacaoEditModal(processId, mov);} break;
+            case 'edit-process': openProcessModal(process); break;
+            case 'edit-movimentacao': 
+                const mov = process.movimentacoes.find(m => m.id == target.dataset.movId);
+                if(mov) openMovimentacaoEditModal(target.dataset.processId, mov);
+                break;
         }
     });
 
     document.getElementById('addProcessBtn').addEventListener('click', () => openProcessModal());
 
     const openProcessModal = (process = null) => {
+        const processForm = document.getElementById('processForm');
         processForm.reset();
-        document.getElementById('processId').value = process ? process.id : '';
+        currentProcessId = process ? process.id : null;
+        document.getElementById('processId').value = currentProcessId;
         document.getElementById('processModalTitle').textContent = process ? 'Editar Processo' : 'Novo Processo';
-        const area = process ? process.area_direito : '';
-        updateVaraOptions(area);
         
         if (process) {
             document.getElementById('numeroProcesso').value = process.numero;
@@ -305,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(processModal);
     };
 
-    processForm.addEventListener('submit', async (e) => {
+    document.getElementById('processForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('processId').value;
         const data = {
@@ -323,104 +336,64 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchProcesses();
     });
 
-    // Lógica condicional para audiência e varas
     document.getElementById('modoAudiencia').addEventListener('change', e => { document.getElementById('linkAudienciaContainer').classList.toggle('hidden', e.target.value !== 'Online'); });
-    document.getElementById('areaDireito').addEventListener('change', e => updateVaraOptions(e.target.value));
-
-    function updateVaraOptions(area) {
-        const varaSelect = document.getElementById('vara');
-        varaSelect.innerHTML = '<option value="">Selecione a vara...</option>';
-        if (area && varasPorArea[area]) {
-            varasPorArea[area].forEach(vara => {
-                const option = document.createElement('option');
-                option.value = vara;
-                option.textContent = vara;
-                varaSelect.appendChild(option);
-            });
-        }
-    }
     
-    // --- LÓGICA DE MOVIMENTAÇÕES (semelhante à V3) ---
-    // ...
+    // --- LÓGICA DE MOVIMENTAÇÕES, STATUS, LINKS ---
+    const openMovimentacaoModal = (processId) => { document.getElementById('movimentacaoForm').reset(); document.getElementById('movimentacaoProcessId').value = processId; document.getElementById('prazoFatalContainer').classList.add('hidden'); openModal(movimentacaoModal); };
+    const openMovimentacaoEditModal = (processId, mov) => { document.getElementById('movimentacaoEditForm').reset(); document.getElementById('movimentacaoEditProcessId').value = processId; document.getElementById('movimentacaoEditId').value = mov.id; document.getElementById('movimentacaoEditDescricao').value = mov.descricao; document.getElementById('movimentacaoEditConcluido').checked = mov.concluido; openModal(movimentacaoEditModal); };
+    document.getElementById('definirPrazo').addEventListener('change', e => { document.getElementById('prazoFatalContainer').classList.toggle('hidden', !e.target.checked);});
+    document.getElementById('movimentacaoForm').addEventListener('submit', async (e) => { e.preventDefault(); const id = document.getElementById('movimentacaoProcessId').value; const data = { descricao: document.getElementById('movimentacaoDescricao').value, prazo_fatal: document.getElementById('definirPrazo').checked ? document.getElementById('prazoFatal').value : null }; await apiRequest(`/processes/${id}/movimentacoes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); closeModal(movimentacaoModal); fetchProcesses(); if(pages.gestao.offsetParent) fetchGestaoData(); if(pages.calendario.offsetParent) fetchCalendarData(); });
+    document.getElementById('movimentacaoEditForm').addEventListener('submit', async (e) => { e.preventDefault(); const processId = document.getElementById('movimentacaoEditProcessId').value; const movId = document.getElementById('movimentacaoEditId').value; const data = { descricao: document.getElementById('movimentacaoEditDescricao').value, concluido: document.getElementById('movimentacaoEditConcluido').checked }; await apiRequest(`/processes/${processId}/movimentacoes/${movId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); closeModal(movimentacaoEditModal); fetchProcesses(); });
+    document.getElementById('processList').addEventListener('change', async e => { if (e.target.classList.contains('status-select')) { const id = e.target.dataset.id; const newStatus = e.target.value; await apiRequest(`/processes/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }); fetchProcesses(); }});
+    
+    // Lógica de Links (corrigida)
+    const renderLinks = (links = []) => { const list = document.getElementById('linksList'); list.innerHTML = links.map(link => `<div class="flex items-center justify-between bg-gray-100 p-2 rounded"><a href="${link.url}" target="_blank" class="text-sm text-blue-600 hover:underline truncate" title="${link.url}"><i class="fas fa-link mr-2"></i>${link.descricao}</a><button type="button" data-link-id="${link.id}" class="delete-link-btn text-red-500 hover:text-red-700 text-xs p-1"><i class="fas fa-trash"></i></button></div>`).join('') || '<p class="text-xs text-gray-500">Nenhum link adicionado.</p>'; };
+    document.getElementById('addLinkBtn').addEventListener('click', async () => { const urlInput = document.getElementById('newLinkUrl'); const descInput = document.getElementById('newLinkDesc'); if (!urlInput.value || !descInput.value) { alert('URL e descrição são obrigatórios.'); return; } const updatedProcess = await apiRequest(`/processes/${currentProcessId}/links`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput.value, descricao: descInput.value }) }); renderLinks(updatedProcess.links); const index = allProcesses.findIndex(p => p.id == currentProcessId); if(index !== -1) allProcesses[index] = updatedProcess; urlInput.value = ''; descInput.value = ''; });
+    document.getElementById('linksList').addEventListener('click', async e => { const deleteBtn = e.target.closest('.delete-link-btn'); if (deleteBtn && confirm('Tem a certeza?')) { const updatedProcess = await apiRequest(`/processes/${currentProcessId}/links/${deleteBtn.dataset.linkId}`, { method: 'DELETE' }); renderLinks(updatedProcess.links); const index = allProcesses.findIndex(p => p.id == currentProcessId); if(index !== -1) allProcesses[index] = updatedProcess; }});
 
     // --- FILTRO DE TRIBUNAL ---
-    function populateTribunalFilter() {
-        const list = document.getElementById('tribunalList');
-        list.innerHTML = `<div><label class="flex items-center"><input type="checkbox" value="Todos" checked class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary mr-2"> Todos</label></div>` +
-            tribunais.map(t => `<div><label class="flex items-center"><input type="checkbox" value="${t}" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary mr-2"> ${t}</label></div>`).join('');
-        
-        list.querySelector('input[value="Todos"]').addEventListener('change', e => {
-            list.querySelectorAll('input').forEach(cb => cb.checked = e.target.checked);
-        });
-    }
-
-    tribunalFilterBtn.addEventListener('click', () => openModal(tribunalFilterModal));
-    document.getElementById('applyTribunalFilter').addEventListener('click', () => {
-        fetchProcesses();
-        closeModal(tribunalFilterModal);
-    });
+    function populateTribunalFilter() { const list = document.getElementById('tribunalList'); list.innerHTML = `<div><label class="flex items-center"><input type="checkbox" value="Todos" checked class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary mr-2"> Todos</label></div>` + tribunais.map(t => `<div><label class="flex items-center"><input type="checkbox" value="${t}" checked class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary mr-2"> ${t}</label></div>`).join(''); list.querySelector('input[value="Todos"]').addEventListener('change', e => { list.querySelectorAll('input').forEach(cb => cb.checked = e.target.checked); }); }
+    document.getElementById('tribunalFilterBtn').addEventListener('click', () => openModal(tribunalFilterModal));
+    document.getElementById('applyTribunalFilter').addEventListener('click', () => { fetchProcesses(); closeModal(tribunalFilterModal); });
 
     // --- LÓGICA CALENDÁRIO ---
     const fetchCalendarData = async () => {
         try {
             const data = await apiRequest('/calendario');
-            renderCalendar(data);
-        } catch (error) {
-            document.getElementById('calendar-container').innerHTML = '<p class="text-red-500">Erro ao carregar eventos do calendário.</p>';
-        }
+            renderCalendar(data.eventos);
+            renderProximasAudiencias(data.proximasAudiencias);
+        } catch (error) { document.getElementById('calendar-container').innerHTML = '<p class="text-red-500">Erro ao carregar eventos.</p>'; }
     };
-
+    const renderProximasAudiencias = (audiencias) => { const list = document.getElementById('proximas-audiencias-list'); list.innerHTML = audiencias.map(a => `<div class="p-2 bg-gray-100 rounded text-sm flex justify-between items-center"><span><span class="font-bold">${a.numero}</span> - ${new Date(a.proxima_audiencia).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</span><button class="text-xs bg-primary text-white px-2 py-1 rounded hover:opacity-80" onclick="navigateTo('processos'); document.getElementById('searchInput').value='${a.numero}'; fetchProcesses();">Ver Processo</button></div>`).join('') || '<p class="text-sm text-gray-500">Nenhuma audiência marcada para os próximos dias.</p>'};
     const renderCalendar = (events = { audiencias: [], prazos: [] }) => {
-        const calendarContainer = document.getElementById('calendar-container');
-        calendarContainer.innerHTML = '';
-        const month = calendarDate.getMonth();
-        const year = calendarDate.getFullYear();
-        document.getElementById('calendar-month-year').textContent = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-        const firstDayOfMonth = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const grid = document.createElement('div');
-        grid.className = 'calendar-grid';
-        ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(day => {
-            const headerEl = document.createElement('div');
-            headerEl.className = 'text-center font-bold text-xs text-primary';
-            headerEl.textContent = day;
-            grid.appendChild(headerEl);
-        });
+        const calendarContainer = document.getElementById('calendar-container'); calendarContainer.innerHTML = ''; const month = calendarDate.getMonth(); const year = calendarDate.getFullYear(); document.getElementById('calendar-month-year').textContent = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); const firstDayOfMonth = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const grid = document.createElement('div'); grid.className = 'calendar-grid'; ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(day => { const h = document.createElement('div'); h.className = 'text-center font-bold text-xs text-primary'; h.textContent = day; grid.appendChild(h); });
         for (let i = 0; i < firstDayOfMonth; i++) { grid.appendChild(document.createElement('div')); }
         for (let day = 1; day <= daysInMonth; day++) {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'calendar-day';
-            const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const audienciasDoDia = events.audiencias.filter(a => a.date && a.date.startsWith(dayDateStr));
-            const prazosDoDia = events.prazos.filter(p => p.date && p.date.startsWith(dayDateStr));
-            let tooltipText = [];
-            let eventsHtml = '<div class="flex gap-1">';
-            if (audienciasDoDia.length > 0) { eventsHtml += '<div class="event-dot event-audiencia"></div>'; tooltipText.push(`Audiências:\n${audienciasDoDia.map(a => `- ${a.numero}`).join('\n')}`); }
-            if (prazosDoDia.length > 0) { eventsHtml += '<div class="event-dot event-prazo"></div>'; tooltipText.push(`Prazos:\n${prazosDoDia.map(p => `- ${p.descricao} (${p.numero})`).join('\n')}`); }
-            eventsHtml += '</div>';
-            dayEl.innerHTML = `<span class="day-number">${day}</span> ${eventsHtml}`;
-            if(tooltipText.length > 0) dayEl.title = tooltipText.join('\n\n');
+            const dayEl = document.createElement('div'); dayEl.className = 'calendar-day'; const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const audienciasDoDia = events.audiencias.filter(a => a.date && a.date.startsWith(dayDateStr)); const prazosDoDia = events.prazos.filter(p => p.date && p.date.startsWith(dayDateStr));
+            let eventsHtml = `<span class="day-number">${day}</span>`;
+            audienciasDoDia.forEach(a => { eventsHtml += `<div class="calendar-event event-audiencia">${a.numero}</div>`});
+            prazosDoDia.forEach(p => { eventsHtml += `<div class="calendar-event event-prazo">${p.numero}</div>`});
+            dayEl.innerHTML = eventsHtml;
             grid.appendChild(dayEl);
         }
         calendarContainer.appendChild(grid);
     };
-
     document.getElementById('prevMonthBtn').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); fetchCalendarData(); });
     document.getElementById('nextMonthBtn').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); fetchCalendarData(); });
     
-    // --- O RESTANTE DO CÓDIGO (GESTÃO, CONFIG, LINKS, ETC.) PERMANECE SEMELHANTE E FOI OMITIDO POR BREVIDADE ---
-    const fetchGestaoData = async () => { /* ... */ };
-    const renderCustomMenu = () => { /* ... */ };
-    const renderCustomMenuItemsList = () => { /* ... */ };
-    const renderLinks = (links) => { /* ... */};
+    // --- GESTÃO E CONFIG (CORRIGIDOS) ---
+    const fetchGestaoData = async () => { const data = await apiRequest('/gestao'); document.getElementById('gestao-pendentes').innerHTML = data.pendentes.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum.</p>'; document.getElementById('gestao-execucao').innerHTML = data.execucao.map(p => `<div class="p-2 bg-gray-100 rounded text-sm">${p.numero} - ${p.cliente}</div>`).join('') || '<p class="text-sm text-gray-500">Nenhum.</p>'; document.getElementById('gestao-semana').innerHTML = data.semana.map(m => `<div class="p-2 bg-gray-100 rounded text-sm"><p class="font-semibold">${m.numero}</p><p>${m.descricao}</p><p class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</p></div>`).join('') || '<p class="text-sm text-gray-500">Nenhuma.</p>'; };
+    document.getElementById('saveLogoBtn').addEventListener('click', () => { const url = document.getElementById('logoUrlInput').value; localStorage.setItem('customLogoUrl', url); document.getElementById('logoLogin').src = url || 'https://placehold.co/300x80/132433/d9d9d9?text=JMD+Advocacia'; document.getElementById('logoApp').src = url || 'https://placehold.co/200x60/132433/d9d9d9?text=JMD+Advocacia';});
+    const getCustomMenuItems = () => JSON.parse(localStorage.getItem('customMenuItems') || '[]');
+    const saveCustomMenuItems = (items) => localStorage.setItem('customMenuItems', JSON.stringify(items));
+    const renderCustomMenu = () => { document.querySelectorAll('.custom-nav-item').forEach(item => item.remove()); getCustomMenuItems().forEach(item => { const link = document.createElement('a'); link.href = item.url; link.textContent = item.text; link.target = "_blank"; link.className = 'nav-link custom-nav-item'; document.getElementById('main-nav').appendChild(link); }); };
+    const renderCustomMenuItemsList = () => { const items = getCustomMenuItems(); document.getElementById('customMenuItemsList').innerHTML = items.map((item, index) => `<div class="flex items-center justify-between bg-gray-100 p-2 rounded"><span class="text-sm">${item.text} -> ${item.url}</span><button data-index="${index}" class="delete-menu-item-btn text-red-500 hover:text-red-700 p-1"><i class="fas fa-trash"></i></button></div>`).join('') || '<p class="text-xs text-gray-500">Nenhum.</p>';};
+    document.getElementById('customMenuForm').addEventListener('submit', (e) => { e.preventDefault(); const items = getCustomMenuItems(); items.push({ text: document.getElementById('menuText').value, url: document.getElementById('menuUrl').value }); saveCustomMenuItems(items); renderCustomMenu(); renderCustomMenuItemsList(); e.target.reset(); });
+    document.getElementById('customMenuItemsList').addEventListener('click', e => { const btn = e.target.closest('.delete-menu-item-btn'); if (btn) { let items = getCustomMenuItems(); items.splice(btn.dataset.index, 1); saveCustomMenuItems(items); renderCustomMenu(); renderCustomMenuItemsList(); } });
     
     // --- INICIALIZAÇÃO ---
-    if (sessionStorage.getItem('loggedIn') === 'true') {
-        initializeAppSettings();
-        showAppScreen();
-    } else {
-        showLoginScreen();
-    }
+    if (sessionStorage.getItem('loggedIn') === 'true') { initializeAppSettings(); showAppScreen(); } else { showLoginScreen(); }
 });
 </script>
 </body>
