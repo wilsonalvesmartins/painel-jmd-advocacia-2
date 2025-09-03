@@ -6,6 +6,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// NOVO: Middleware para registar todos os pedidos recebidos
+app.use((req, res, next) => {
+    console.log(`[API LOG] Pedido recebido: ${req.method} ${req.originalUrl}`);
+    next();
+});
+
 const PORT = 3000;
 
 const pool = new Pool({
@@ -78,6 +84,12 @@ async function startServer() {
         console.log(`API a funcionar na porta ${PORT}`);
     });
 }
+
+// --- ROTA DE SAÚDE (HEALTH CHECK) ---
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'API está a funcionar' });
+});
+
 
 // --- ROTAS DE CONFIGURAÇÕES ---
 app.get('/api/settings', async (req, res) => {
