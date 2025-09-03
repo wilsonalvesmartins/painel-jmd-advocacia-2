@@ -38,7 +38,6 @@ const connectWithRetry = async (retries = 5, delay = 5000) => {
 const initializeDatabase = async () => {
     const client = await pool.connect();
     try {
-        // Cria a tabela principal se não existir
         await client.query(`
             CREATE TABLE IF NOT EXISTS processes (
                 id SERIAL PRIMARY KEY,
@@ -46,19 +45,21 @@ const initializeDatabase = async () => {
                 cliente VARCHAR(255) NOT NULL,
                 status VARCHAR(100) DEFAULT 'Distribuído',
                 movimentacoes JSONB DEFAULT '[]',
-                last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                proxima_audiencia DATE,
+                links JSONB DEFAULT '[]',
+                area_direito VARCHAR(100),
+                tribunal VARCHAR(255),
+                vara VARCHAR(255)
             );
         `);
         console.log('Tabela "processes" verificada/criada com sucesso.');
 
-        // Adiciona novas colunas se elas não existirem (para atualizações futuras)
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia DATE;");
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]';");
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS area_direito VARCHAR(100);");
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS tribunal VARCHAR(255);");
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS vara VARCHAR(255);");
+        // Adiciona novas colunas para V4
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS modo_audiencia VARCHAR(100);");
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS link_audiencia VARCHAR(512);");
 
-        console.log('Colunas da V3 verificadas/adicionadas com sucesso.');
+        console.log('Colunas da V4 (modo e link da audiência) verificadas/adicionadas.');
 
     } catch (err) {
         console.error('Erro ao inicializar o banco de dados:', err);
@@ -78,17 +79,22 @@ app.get('/api/processes', async (req, res) => {
         const conditions = [];
         const params = [];
 
-        if (tribunal) {
-            params.push(`%${tribunal}%`);
-            conditions.push(`tribunal ILIKE $${params.length}`);
+        if (tribunal && tribunal !== 'Todos') {
+            const tribunais = tribunal.split(',');
+            const a = tribunais.map((t, i) => `$${i + 1}`).join(',');
+            conditions.push(`tribunal IN (${a})`);
+            params.push(...tribunais);
         }
+        
+        let paramIndex = params.length + 1;
+
         if (vara) {
-            params.push(`%${vara}%`);
-            conditions.push(`vara ILIKE $${params.length}`);
+            conditions.push(`vara = $${paramIndex++}`);
+            params.push(vara);
         }
         if (search) {
+             conditions.push(`(numero ILIKE $${paramIndex} OR cliente ILIKE $${paramIndex})`);
              params.push(`%${search}%`);
-             conditions.push(`(numero ILIKE $${params.length} OR cliente ILIKE $${params.length})`);
         }
 
         if (conditions.length > 0) {
@@ -107,14 +113,14 @@ app.get('/api/processes', async (req, res) => {
 
 // Criar um novo processo
 app.post('/api/processes', async (req, res) => {
-    const { numero, cliente, area_direito, tribunal, vara } = req.body;
+    const { numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia } = req.body;
     if (!numero || !cliente) {
         return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
     }
     try {
         const result = await pool.query(
-            'INSERT INTO processes (numero, cliente, area_direito, tribunal, vara) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [numero, cliente, area_direito, tribunal, vara]
+            'INSERT INTO processes (numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [numero, cliente, area_direito, tribunal, vara, proxima_audiencia || null, modo_audiencia, link_audiencia]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -126,14 +132,14 @@ app.post('/api/processes', async (req, res) => {
 // Atualizar informações de um processo
 app.put('/api/processes/:id', async (req, res) => {
     const { id } = req.params;
-    const { numero, cliente, proxima_audiencia, area_direito, tribunal, vara } = req.body;
+    const { numero, cliente, proxima_audiencia, area_direito, tribunal, vara, modo_audiencia, link_audiencia } = req.body;
      if (!numero || !cliente) {
         return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
     }
     try {
         const result = await pool.query(
-            'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, area_direito = $4, tribunal = $5, vara = $6, last_updated = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-            [numero, cliente, proxima_audiencia || null, area_direito, tribunal, vara, id]
+            'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, area_direito = $4, tribunal = $5, vara = $6, modo_audiencia = $7, link_audiencia = $8, last_updated = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *',
+            [numero, cliente, proxima_audiencia || null, area_direito, tribunal, vara, modo_audiencia, link_audiencia, id]
         );
         if (result.rowCount === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
         res.json(result.rows[0]);
@@ -284,26 +290,36 @@ app.get('/api/gestao', async (req, res) => {
             WHERE mov.timestamp >= DATE_TRUNC('week', NOW())
             ORDER BY mov.timestamp DESC;
         `);
+        
+        res.json({
+            pendentes: pendentesRes.rows,
+            execucao: execucaoRes.rows,
+            semana: semanaRes.rows
+        });
+
+    } catch (err) {
+        console.error("Erro ao buscar dados de gestão:", err);
+        res.status(500).json({ message: "Erro ao buscar dados para a página de gestão." });
+    }
+});
+
+// Rota para o Calendário
+app.get('/api/calendario', async (req, res) => {
+    try {
         const audienciasRes = await pool.query("SELECT numero, cliente, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL");
         const prazosRes = await pool.query(`
             SELECT p.numero, p.cliente, mov.prazo_fatal as date, mov.descricao
             FROM processes p, jsonb_to_recordset(p.movimentacoes) AS mov(descricao text, prazo_fatal date, concluido boolean)
             WHERE mov.prazo_fatal IS NOT NULL AND mov.concluido = false
         `);
-        
-        res.json({
-            pendentes: pendentesRes.rows,
-            execucao: execucaoRes.rows,
-            semana: semanaRes.rows,
-            calendario: {
-                audiencias: audienciasRes.rows,
-                prazos: prazosRes.rows
-            }
-        });
 
+        res.json({
+            audiencias: audienciasRes.rows,
+            prazos: prazosRes.rows
+        });
     } catch (err) {
-        console.error("Erro ao buscar dados de gestão:", err);
-        res.status(500).json({ message: "Erro ao buscar dados para a página de gestão." });
+         console.error("Erro ao buscar dados do calendário:", err);
+        res.status(500).json({ message: "Erro ao buscar dados para o calendário." });
     }
 });
 
@@ -318,3 +334,4 @@ const startServer = async () => {
 };
 
 startServer();
+
