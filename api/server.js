@@ -8,42 +8,15 @@ app.use(express.json());
 
 const PORT = 3000;
 
-// Configuração da conexão com o PostgreSQL
-let pool;
-const connectWithRetry = () => {
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    });
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-    pool.connect((err, client, release) => {
-        if (err) {
-            console.error('Falha ao conectar ao PostgreSQL:', err.message);
-            console.log('Tentativas restantes:', 5 - retries);
-            retries++;
-            if (retries < 6) {
-                setTimeout(connectWithRetry, 5000);
-            } else {
-                console.error('Não foi possível conectar ao banco de dados após várias tentativas. A API não será iniciada.');
-            }
-        } else {
-            console.log('Conectado com sucesso ao PostgreSQL!');
-            initializeDb();
-            if(release) release();
-        }
-    });
-};
-
-let retries = 1;
-connectWithRetry();
-
-
-const initializeDb = async () => {
+async function initializeDb() {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-
-        // Garante que a tabela principal exista com todas as colunas
         await client.query(`
             CREATE TABLE IF NOT EXISTS processes (
                 id SERIAL PRIMARY KEY,
@@ -58,41 +31,61 @@ const initializeDb = async () => {
                 vara VARCHAR(255)
             );
         `);
-        
-        // Garante que a tabela de configurações exista
         await client.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB
             );
         `);
-        
-        // Garante que a linha de configuração exista, sem sobrescrever dados existentes
         await client.query(`
             INSERT INTO settings (key, value)
             VALUES ('office_settings', '{"logo_url": "", "custom_menu_links": []}')
             ON CONFLICT (key) DO NOTHING;
         `);
-        
         await client.query('COMMIT');
         console.log('Tabelas "processes" e "settings" verificadas/criadas com sucesso.');
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Erro ao inicializar o banco de dados:', err.stack);
+        throw err; // Lança o erro para a função startServer
     } finally {
         client.release();
     }
-};
+}
+
+async function startServer() {
+    let retries = 5;
+    while (retries) {
+        try {
+            const client = await pool.connect();
+            console.log('Conectado com sucesso ao PostgreSQL!');
+            client.release();
+            await initializeDb();
+            break; 
+        } catch (err) {
+            console.error('Falha ao conectar ou inicializar o DB:', err.message);
+            retries -= 1;
+            console.log(`Tentativas restantes: ${retries}`);
+            if (retries === 0) {
+                 console.error('Não foi possível conectar ao banco de dados após várias tentativas. A API não será iniciada.');
+                 process.exit(1);
+            }
+            await new Promise(res => setTimeout(res, 5000));
+        }
+    }
+    
+    app.listen(PORT, () => {
+        console.log(`API a funcionar na porta ${PORT}`);
+    });
+}
 
 // --- ROTAS DE CONFIGURAÇÕES ---
-
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
         if (result.rows.length > 0) {
             res.json(result.rows[0].value);
         } else {
-            // Se não houver nada, insere o valor padrão e retorna
             const defaultValue = { logo_url: '', custom_menu_links: [] };
              await pool.query(`
                 INSERT INTO settings (key, value)
@@ -311,7 +304,5 @@ app.get('/api/gestao', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`API a funcionar na porta ${PORT}`);
-});
+startServer();
 
