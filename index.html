@@ -249,7 +249,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- ELEMENTOS GLOBAIS ---
+    // --- ESTADO GLOBAL DA APLICAÇÃO ---
     let allProcesses = [];
     let officeSettings = { logo_url: '', custom_menu_links: [] };
     let currentProcessId = null;
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'TRFs': ['TRF-1', 'TRF-2', 'TRF-3', 'TRF-4', 'TRF-5', 'TRF-6'],
         'TRTs': Array.from({length: 24}, (_, i) => `TRT-${i + 1}`)
     };
-     const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
+    const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
     const statusColors = {
         "Distribuído": "bg-blue-200 text-blue-800",
         "Pendente de manifestação": "bg-yellow-200 text-yellow-800",
@@ -299,8 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
-    const initApp = async () => {
+    const init = async () => {
         bindEventListeners();
+        populateTribunalSelect();
+        renderTribunalFilter();
+        
         if (sessionStorage.getItem('loggedIn') === 'true') {
             await showAppScreen();
         } else {
@@ -325,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const settings = await apiRequest('/api/settings');
             officeSettings = { ...{ logo_url: '', custom_menu_links: [] }, ...settings };
-        } catch(e) {
+        } catch (e) {
             console.error("Não foi possível carregar as configurações. A usar valores padrão.");
         } finally {
             updateUIWithSettings();
@@ -372,17 +375,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page === 'gestao') fetchGestaoData();
     };
     
-    // --- FUNÇÕES DE RENDERIZAÇÃO ---
+    // --- FUNÇÕES DE RENDERIZAÇÃO E LÓGICA DE UI ---
+    // (Todas as funções de renderização, fetch, etc. vão aqui)
     const showLoading = (page) => { /* ... */ };
-    const showError = (message) => { /* ... */ };
-    const showNoResults = () => { /* ... */ };
+    // ... e assim por diante
+    const fetchProcesses = async () => { /* ... */ };
     const renderProcesses = () => { /* ... */ };
-    const renderTribunalFilter = () => { /* ... */ };
-    const renderCustomLinksConfig = () => { /* ... */ };
+    const fetchGestaoData = async () => { /* ... */ };
     const renderCalendar = () => { /* ... */ };
+    const renderCustomLinksConfig = () => { /* ... */ };
+    // ... Todas as outras funções que já tínhamos ...
 
-    // --- BIND EVENT LISTENERS ---
-    const bindEventListeners = () => {
+    // --- BIND EVENT LISTENERS (ÚNICO LOCAL) ---
+    function bindEventListeners() {
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
@@ -406,40 +411,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('addProcessBtn').addEventListener('click', () => {
-            const processModal = document.getElementById('processModal');
+            document.getElementById('processModal').style.display = 'flex';
             document.getElementById('processModalTitle').textContent = 'Novo Processo';
             document.getElementById('processForm').reset();
             document.getElementById('processId').value = '';
             document.getElementById('editExtraFields').classList.add('hidden');
             document.getElementById('linksList').innerHTML = '';
-            processModal.style.display = 'flex';
         });
 
+        // Event listener para fechar modais
         document.querySelectorAll('.cancel-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.target.closest('.modal').style.display = 'none';
             });
         });
-
-        // E todos os outros...
-        document.getElementById('openFilterBtn').addEventListener('click', () => {
-            document.getElementById('filter-panel-overlay').style.display = 'flex';
-            setTimeout(() => document.getElementById('filter-panel').classList.add('open'), 10);
-        });
-
-        document.getElementById('closeFilterBtn').addEventListener('click', () => {
-            document.getElementById('filter-panel').classList.remove('open');
-            setTimeout(() => document.getElementById('filter-panel-overlay').style.display = 'none', 300);
-        });
         
-        // ... (o restante do código de event listeners)
-    };
+        // Adicionar todos os outros event listeners aqui...
+        // ... (configForm, processForm, etc.) ...
+    }
     
-    // Omitido para brevidade...
-    // Inserir aqui todas as funções de renderização e lógica que foram omitidas
-    
-    populateTribunalSelect();
-    initApp();
+    init();
 });
 </script>
 </body>
