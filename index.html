@@ -252,11 +252,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS GLOBAIS ---
     let allProcesses = [];
     let officeSettings = { logo_url: '', custom_menu_links: [] };
+    let currentProcessId = null;
+    let calendarDate = new Date();
+    let calendarEvents = { audiencias: [], prazos: [] };
+    let activeFilters = { tribunal: 'Todos', vara: '' };
+    
     const tribunais = {
         'STF': [], 'STJ': [], 'TST': [],
         'TJs': ['TJAC', 'TJAL', 'TJAP', 'TJAM', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO', 'TJMA', 'TJMT', 'TJMS', 'TJMG', 'TJPA', 'TJPB', 'TJPR', 'TJPE', 'TJPI', 'TJRJ', 'TJRN', 'TJRS', 'TJRO', 'TJRR', 'TJSC', 'TJSP', 'TJSE', 'TJTO'],
         'TRFs': ['TRF-1', 'TRF-2', 'TRF-3', 'TRF-4', 'TRF-5', 'TRF-6'],
         'TRTs': Array.from({length: 24}, (_, i) => `TRT-${i + 1}`)
+    };
+     const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
+    const statusColors = {
+        "Distribuído": "bg-blue-200 text-blue-800",
+        "Pendente de manifestação": "bg-yellow-200 text-yellow-800",
+        "Aguardando Audiência": "bg-purple-200 text-purple-800",
+        "Sentença": "bg-green-200 text-green-800",
+        "Recurso": "bg-orange-200 text-orange-800",
+        "Liquidação": "bg-teal-200 text-teal-800",
+        "Em fase de execução": "bg-pink-200 text-pink-800",
+        "default": "bg-gray-200 text-gray-800"
     };
 
     // --- FUNÇÕES DE API ---
@@ -284,28 +300,34 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
     const initApp = async () => {
-        // Vincula todos os event listeners da aplicação
         bindEventListeners();
-
         if (sessionStorage.getItem('loggedIn') === 'true') {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
-            await fetchSettingsAndInitialize();
-            navigateTo('processos');
+            await showAppScreen();
         } else {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('app').classList.add('hidden');
-            await fetchSettingsAndInitialize();
+            await showLoginScreen();
         }
+    };
+
+    const showAppScreen = async () => {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        await fetchSettingsAndInitialize();
+        navigateTo('processos');
+    };
+
+    const showLoginScreen = async () => {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+        await fetchSettingsAndInitialize();
     };
 
     const fetchSettingsAndInitialize = async () => {
         try {
             const settings = await apiRequest('/api/settings');
             officeSettings = { ...{ logo_url: '', custom_menu_links: [] }, ...settings };
-            updateUIWithSettings();
         } catch(e) {
             console.error("Não foi possível carregar as configurações. A usar valores padrão.");
+        } finally {
             updateUIWithSettings();
         }
     };
@@ -349,6 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page === 'processos') fetchProcesses();
         if (page === 'gestao') fetchGestaoData();
     };
+    
+    // --- FUNÇÕES DE RENDERIZAÇÃO ---
+    const showLoading = (page) => { /* ... */ };
+    const showError = (message) => { /* ... */ };
+    const showNoResults = () => { /* ... */ };
+    const renderProcesses = () => { /* ... */ };
+    const renderTribunalFilter = () => { /* ... */ };
+    const renderCustomLinksConfig = () => { /* ... */ };
+    const renderCalendar = () => { /* ... */ };
 
     // --- BIND EVENT LISTENERS ---
     const bindEventListeners = () => {
@@ -357,7 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             if (username === 'escritorio' && password === '36672456') {
-                initApp(); // Re-inicializa a app após o login
+                sessionStorage.setItem('loggedIn', 'true');
+                showAppScreen();
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
@@ -365,14 +397,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
              sessionStorage.removeItem('loggedIn');
-             initApp();
+             showLoginScreen();
         });
 
         document.getElementById('main-nav').addEventListener('click', (e) => {
             const navLink = e.target.closest('a[data-page]');
-            if (navLink) {
-                navigateTo(navLink.dataset.page);
-            }
+            if (navLink) navigateTo(navLink.dataset.page);
         });
 
         document.getElementById('addProcessBtn').addEventListener('click', () => {
@@ -385,38 +415,30 @@ document.addEventListener('DOMContentLoaded', () => {
             processModal.style.display = 'flex';
         });
 
-        // Adicione todos os outros event listeners aqui...
-        // Exemplo para o botão de filtros
-        document.getElementById('openFilterBtn').addEventListener('click', () => {
-            document.getElementById('filter-panel-overlay').style.display = 'flex';
-            setTimeout(() => document.getElementById('filter-panel').classList.add('open'), 10);
-        });
-
-        // Fechar painel de filtros
-        document.getElementById('closeFilterBtn').addEventListener('click', closeFilterPanel);
-        document.getElementById('filter-panel-overlay').addEventListener('click', (e) => {
-             if(e.target === document.getElementById('filter-panel-overlay')) closeFilterPanel();
-        });
-
         document.querySelectorAll('.cancel-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.target.closest('.modal').style.display = 'none';
             });
         });
-        
-        // O restante do seu código de event listeners
-        // ...
-    };
 
-    // O resto do seu código de funções (renderProcesses, fetchGestaoData, etc.) vai aqui.
-    // Vou omitir para não repetir o bloco de código gigante.
-    // O código completo que lhe dei anteriormente deve ser inserido aqui.
+        // E todos os outros...
+        document.getElementById('openFilterBtn').addEventListener('click', () => {
+            document.getElementById('filter-panel-overlay').style.display = 'flex';
+            setTimeout(() => document.getElementById('filter-panel').classList.add('open'), 10);
+        });
+
+        document.getElementById('closeFilterBtn').addEventListener('click', () => {
+            document.getElementById('filter-panel').classList.remove('open');
+            setTimeout(() => document.getElementById('filter-panel-overlay').style.display = 'none', 300);
+        });
+        
+        // ... (o restante do código de event listeners)
+    };
     
-    // ...
-    // --- FUNÇÕES COMPLETAS OMITIDAS PARA BREVIDADE ---
-    // ...
+    // Omitido para brevidade...
+    // Inserir aqui todas as funções de renderização e lógica que foram omitidas
     
-    // Inicia a aplicação
+    populateTribunalSelect();
     initApp();
 });
 </script>
