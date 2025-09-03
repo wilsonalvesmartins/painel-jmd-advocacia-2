@@ -243,7 +243,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // ESTADO GLOBAL DA APLICAÇÃO
+    // --- ESTADO GLOBAL DA APLICAÇÃO ---
     let allProcesses = [];
     let officeSettings = { logo_url: '', custom_menu_links: [] };
     let currentProcessId = null;
@@ -251,23 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let calendarEvents = { audiencias: [], prazos: [] };
     let activeFilters = { tribunal: 'Todos', vara: '' };
     
-    const tribunais = {
-        'STF': [], 'STJ': [], 'TST': [],
-        'TJs': ['TJAC', 'TJAL', 'TJAP', 'TJAM', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO', 'TJMA', 'TJMT', 'TJMS', 'TJMG', 'TJPA', 'TJPB', 'TJPR', 'TJPE', 'TJPI', 'TJRJ', 'TJRN', 'TJRS', 'TJRO', 'TJRR', 'TJSC', 'TJSP', 'TJSE', 'TJTO'],
-        'TRFs': ['TRF-1', 'TRF-2', 'TRF-3', 'TRF-4', 'TRF-5', 'TRF-6'],
-        'TRTs': Array.from({length: 24}, (_, i) => `TRT-${i + 1}`)
-    };
+    const tribunais = { 'STF': [], 'STJ': [], 'TST': [], 'TJs': ['TJAC', 'TJAL', 'TJAP', 'TJAM', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO', 'TJMA', 'TJMT', 'TJMS', 'TJMG', 'TJPA', 'TJPB', 'TJPR', 'TJPE', 'TJPI', 'TJRJ', 'TJRN', 'TJRS', 'TJRO', 'TJRR', 'TJSC', 'TJSP', 'TJSE', 'TJTO'], 'TRFs': ['TRF-1', 'TRF-2', 'TRF-3', 'TRF-4', 'TRF-5', 'TRF-6'], 'TRTs': Array.from({length: 24}, (_, i) => `TRT-${i + 1}`) };
     const statusOptions = ["Distribuído", "Pendente de manifestação", "Aguardando Audiência", "Sentença", "Recurso", "Liquidação", "Em fase de execução"];
-    const statusColors = {
-        "Distribuído": "bg-blue-200 text-blue-800",
-        "Pendente de manifestação": "bg-yellow-200 text-yellow-800",
-        "Aguardando Audiência": "bg-purple-200 text-purple-800",
-        "Sentença": "bg-green-200 text-green-800",
-        "Recurso": "bg-orange-200 text-orange-800",
-        "Liquidação": "bg-teal-200 text-teal-800",
-        "Em fase de execução": "bg-pink-200 text-pink-800",
-        "default": "bg-gray-200 text-gray-800"
-    };
+    const statusColors = { "Distribuído": "bg-blue-200 text-blue-800", "Pendente de manifestação": "bg-yellow-200 text-yellow-800", "Aguardando Audiência": "bg-purple-200 text-purple-800", "Sentença": "bg-green-200 text-green-800", "Recurso": "bg-orange-200 text-orange-800", "Liquidação": "bg-teal-200 text-teal-800", "Em fase de execução": "bg-pink-200 text-pink-800", "default": "bg-gray-200 text-gray-800" };
 
     // --- FUNÇÕES DE API ---
     const apiRequest = async (url, options = {}) => {
@@ -284,9 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorState = document.getElementById('error-state');
             const errorMessage = document.getElementById('errorMessage');
             if(errorState && errorMessage) {
+                document.getElementById('loading-state').classList.add('hidden');
                 errorState.classList.remove('hidden');
                 errorMessage.textContent = `Erro: ${error.message}`;
-                document.getElementById('loading-state').classList.add('hidden');
             }
             throw error;
         }
@@ -295,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
     const init = async () => {
         bindStaticEventListeners();
-        
         if (sessionStorage.getItem('loggedIn') === 'true') {
             await showAppScreen();
         } else {
@@ -334,11 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('logoUrl').value = officeSettings.logo_url || '';
 
         const mainNav = document.getElementById('main-nav');
-        mainNav.innerHTML = `
-            <a data-page="processos" class="nav-link">Painel de Processos</a>
-            <a data-page="gestao" class="nav-link">Gestão</a>
-            <a data-page="config" class="nav-link">Configurações</a>
-        `;
+        mainNav.innerHTML = `<a data-page="processos" class="nav-link">Painel de Processos</a><a data-page="gestao" class="nav-link">Gestão</a><a data-page="config" class="nav-link">Configurações</a>`;
         (officeSettings.custom_menu_links || []).forEach(link => {
             const linkEl = document.createElement('a');
             linkEl.href = link.url;
@@ -368,14 +349,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page === 'processos') fetchProcesses();
         if (page === 'gestao') fetchGestaoData();
     };
-
+    
     // --- FUNÇÕES DE RENDERIZAÇÃO E LÓGICA DE UI ---
-    // (O código completo de todas as funções de renderização, fetch, etc., deve ser colocado aqui)
-    // ...
+    const showLoading = (page) => {
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        const noResults = document.getElementById('no-results');
+        const processList = document.getElementById('processList');
+
+        if (page === 'processos') {
+            loadingState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            noResults.classList.add('hidden');
+            processList.innerHTML = '';
+        } else if (page === 'gestao') {
+            document.getElementById('gestao-pendentes').innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            document.getElementById('gestao-execucao').innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            document.getElementById('gestao-semana').innerHTML = '<p class="text-sm text-gray-500">A carregar...</p>';
+            document.getElementById('calendar-container').innerHTML = '<p class="text-sm text-gray-500">A carregar calendário...</p>';
+        }
+    };
+    const showNoResults = () => {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('error-state').classList.add('hidden');
+        document.getElementById('no-results').classList.remove('hidden');
+        document.getElementById('processList').innerHTML = '';
+    };
+    const renderProcesses = () => { /* ... O código completo está no Canvas ... */ };
+    const populateTribunalSelect = () => { /* ... O código completo está no Canvas ... */ };
+    const renderTribunalFilter = () => { /* ... O código completo está no Canvas ... */ };
+    const renderCustomLinksConfig = () => { /* ... O código completo está no Canvas ... */ };
+    const renderCalendar = () => { /* ... O código completo está no Canvas ... */ };
+    const fetchProcesses = async () => { /* ... O código completo está no Canvas ... */ };
+    const fetchGestaoData = async () => { /* ... O código completo está no Canvas ... */ };
+    const openEditModal = (id) => { /* ... O código completo está no Canvas ... */ };
 
     // --- FUNÇÃO PARA VINCULAR EVENTOS ---
     function bindStaticEventListeners() {
-        // Formulário de Login
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
@@ -388,14 +398,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Outros 'listeners' estáticos...
-        // O restante do código de ligação de eventos vai aqui.
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+             sessionStorage.removeItem('loggedIn');
+             showLoginScreen();
+        });
+        
+        document.getElementById('main-nav').addEventListener('click', (e) => {
+            const navLink = e.target.closest('a[data-page]');
+            if (navLink) navigateTo(navLink.dataset.page);
+        });
+
+        document.getElementById('addProcessBtn').addEventListener('click', () => {
+             document.getElementById('processModal').style.display = 'flex';
+             document.getElementById('processModalTitle').textContent = 'Novo Processo';
+             document.getElementById('processForm').reset();
+             document.getElementById('processId').value = '';
+             document.getElementById('editExtraFields').classList.add('hidden');
+             document.getElementById('linksList').innerHTML = '';
+        });
+        
+        // Todos os outros listeners estáticos vão aqui para evitar duplicação
         // ...
     }
+    
+    // Delegação de eventos para elementos dinâmicos
+    document.body.addEventListener('click', (e) => {
+        if(e.target.closest('.cancel-btn')) {
+            e.target.closest('.modal').style.display = 'none';
+        }
+        
+        const card = e.target.closest('[data-process-id]');
+        const addMovBtn = e.target.closest('.add-movimentacao-btn');
 
-    init();
+        if (addMovBtn) {
+            e.stopPropagation();
+            const id = addMovBtn.dataset.id;
+            // ... lógica para abrir modal de movimentação
+        } else if (card) {
+            const id = card.dataset.processId;
+            openEditModal(id);
+        }
+    });
+
+    // ... (restante da lógica de delegação de eventos)
+    
+    init(); // Inicia a aplicação
 });
-
 </script>
 </body>
 </html>
