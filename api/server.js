@@ -43,6 +43,7 @@ const initializeDb = async () => {
     try {
         await client.query('BEGIN');
 
+        // Garante que a tabela principal exista com todas as colunas
         await client.query(`
             CREATE TABLE IF NOT EXISTS processes (
                 id SERIAL PRIMARY KEY,
@@ -58,26 +59,20 @@ const initializeDb = async () => {
             );
         `);
         
+        // Garante que a tabela de configurações exista
         await client.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB
             );
         `);
-
-        // Garante que as colunas existem antes de as usar
-        const columns = await client.query(`
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'settings' AND column_name = 'value';
+        
+        // Garante que a linha de configuração exista, sem sobrescrever dados existentes
+        await client.query(`
+            INSERT INTO settings (key, value)
+            VALUES ('office_settings', '{"logo_url": "", "custom_menu_links": []}')
+            ON CONFLICT (key) DO NOTHING;
         `);
-        if (columns.rows.length > 0) {
-            // Garante que a configuração de links exista
-             await client.query(`
-                INSERT INTO settings (key, value)
-                VALUES ('office_settings', '{"logo_url": "", "custom_menu_links": []}')
-                ON CONFLICT (key) DO NOTHING;
-            `);
-        }
         
         await client.query('COMMIT');
         console.log('Tabelas "processes" e "settings" verificadas/criadas com sucesso.');
@@ -89,7 +84,7 @@ const initializeDb = async () => {
     }
 };
 
-// --- ROTAS DE CONFIGURAções ---
+// --- ROTAS DE CONFIGURAÇÕES ---
 
 app.get('/api/settings', async (req, res) => {
     try {
@@ -97,7 +92,14 @@ app.get('/api/settings', async (req, res) => {
         if (result.rows.length > 0) {
             res.json(result.rows[0].value);
         } else {
-            res.json({ logo_url: '', custom_menu_links: [] });
+            // Se não houver nada, insere o valor padrão e retorna
+            const defaultValue = { logo_url: '', custom_menu_links: [] };
+             await pool.query(`
+                INSERT INTO settings (key, value)
+                VALUES ('office_settings', $1)
+                ON CONFLICT (key) DO NOTHING;
+            `, [JSON.stringify(defaultValue)]);
+            res.json(defaultValue);
         }
     } catch (err) {
         console.error(err);
@@ -108,7 +110,6 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
     const { logo_url, custom_menu_links } = req.body;
     try {
-        // Obter configurações existentes para não sobrescrever
         const existingSettingsRes = await pool.query('SELECT value FROM settings WHERE key = $1', ['office_settings']);
         const existingSettings = existingSettingsRes.rows.length > 0 ? existingSettingsRes.rows[0].value : {};
 
@@ -132,12 +133,9 @@ app.post('/api/settings', async (req, res) => {
 
 
 // --- ROTAS DE PROCESSOS ---
-// (As rotas de processos existentes permanecem as mesmas)
-
-// Obter todos os processos com filtros
 app.get('/api/processes', async (req, res) => {
     try {
-        let query = 'SELECT * FROM processes ORDER BY created_at DESC';
+        let baseQuery = 'SELECT * FROM processes';
         const params = [];
         const conditions = [];
 
@@ -151,10 +149,12 @@ app.get('/api/processes', async (req, res) => {
         }
         
         if (conditions.length > 0) {
-            query = `SELECT * FROM processes WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`;
+            baseQuery += ` WHERE ${conditions.join(' AND ')}`;
         }
+        
+        baseQuery += ' ORDER BY created_at DESC';
 
-        const result = await pool.query(query, params);
+        const result = await pool.query(baseQuery, params);
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -281,21 +281,14 @@ app.delete('/api/processes/:processId/links/:linkId', async (req, res) => {
 // --- ROTA DE GESTÃO ---
 app.get('/api/gestao', async (req, res) => {
     try {
-        // Processos pendentes de manifestação
         const pendentesRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Pendente de manifestação'");
-
-        // Processos em fase de execução
         const execucaoRes = await pool.query("SELECT id, numero, cliente FROM processes WHERE status = 'Em fase de execução'");
-
-        // Movimentações da semana
         const semanaRes = await pool.query(`
             SELECT p.numero, m.*
             FROM processes p, jsonb_to_recordset(p.movimentacoes) as m(descricao text, timestamp timestamptz)
             WHERE m.timestamp >= date_trunc('week', CURRENT_DATE)
             ORDER BY m.timestamp DESC
         `);
-
-        // Dados para o calendário
         const audienciasRes = await pool.query("SELECT numero, proxima_audiencia as date FROM processes WHERE proxima_audiencia IS NOT NULL");
         const prazosRes = await pool.query(`
             SELECT p.numero, m.descricao, m.prazo_fatal as date
