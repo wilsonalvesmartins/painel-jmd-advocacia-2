@@ -24,12 +24,15 @@ services:
       db:
         condition: service_healthy
     environment:
-      POSTGRES_USER: jmd_user
-      POSTGRES_PASSWORD: superstrongpassword123
-      POSTGRES_DB: jmd_processos
       DATABASE_URL: postgresql://jmd_user:superstrongpassword123@db:5432/jmd_processos
     networks:
       - jmd-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Serviço da Base de Dados
   db:
@@ -57,4 +60,3 @@ volumes:
 networks:
   jmd-network:
     driver: bridge
-
