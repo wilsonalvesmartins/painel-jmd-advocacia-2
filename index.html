@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Processos v8 - JMD Advocacia</title>
+    <title>Painel de Processos v9 - JMD Advocacia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -19,9 +19,26 @@
         .nav-link:not(.active) { color: #132433; }
         .nav-link:not(.active):hover { background-color: #ffffff; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.8rem; position: relative; min-height: 100px; }
-        .day-number { font-size: 0.9rem; margin-bottom: 4px; }
-        .calendar-event { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .calendar-day {
+            display: flex;
+            flex-direction: column;
+            padding: 4px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            height: 110px; /* Altura fixa */
+            overflow: hidden; /* Esconde o que transbordar */
+        }
+        .day-number { font-size: 0.9rem; margin-bottom: 4px; flex-shrink: 0; }
+        .calendar-event {
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+        }
         .event-audiencia { background-color: #3b82f6; color: white; }
         .event-prazo { background-color: #ef4444; color: white; }
         .movimentacao-item.concluida { text-decoration: line-through; opacity: 0.6; }
@@ -221,30 +238,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allProcesses.forEach(p => {
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-md p-5 border-l-4 border-primary transition hover:shadow-lg flex flex-col';
+            card.className = 'bg-white rounded-lg shadow-md border-l-4 border-primary flex flex-col';
             const statusColor = statusColors[p.status] || statusColors.default;
             card.innerHTML = `
-                <div class="flex flex-col sm:flex-row flex-wrap justify-between items-start gap-4 flex-grow">
-                    <div class="flex-grow cursor-pointer w-full" data-action="edit-process" data-id="${p.id}">
-                        <div class="flex items-center flex-wrap gap-2 mb-2">
-                           <span class="text-xs font-semibold py-1 px-2 rounded-full bg-gray-200 text-gray-800">${p.area_direito || 'N/A'}</span>
-                           <span class="text-xs font-semibold py-1 px-2 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
-                           ${p.link_tribunal ? `<a href="${p.link_tribunal}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200"><i class="fa fa-landmark mr-1"></i>Link Tribunal</a>` : ''}
-                           ${p.modo_audiencia === 'Online' && p.link_audiencia ? `<a href="${p.link_audiencia}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200"><i class="fa fa-video mr-1"></i>Link Audiência</a>` : ''}
+                <div class="p-5 flex-grow">
+                    <div class="flex flex-col sm:flex-row flex-wrap justify-between items-start gap-4">
+                        <div class="flex-grow cursor-pointer w-full" data-action="edit-process" data-id="${p.id}">
+                            <div class="flex items-center flex-wrap gap-2 mb-2">
+                               <span class="text-xs font-semibold py-1 px-2 rounded-full bg-gray-200 text-gray-800">${p.area_direito || 'N/A'}</span>
+                               <span class="text-xs font-semibold py-1 px-2 rounded-full ${statusColor}">${p.status || 'Não definido'}</span>
+                               ${p.link_tribunal ? `<a href="${p.link_tribunal}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200"><i class="fa fa-landmark mr-1"></i>Link Tribunal</a>` : ''}
+                               ${p.modo_audiencia === 'Online' && p.link_audiencia ? `<a href="${p.link_audiencia}" target="_blank" onclick="event.stopPropagation()" class="text-xs font-semibold py-1 px-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200"><i class="fa fa-video mr-1"></i>Link Audiência</a>` : ''}
+                            </div>
+                            <h3 class="text-xl font-bold text-primary">${p.cliente}</h3>
+                            <p class="text-md text-gray-700">${p.numero}</p>
+                            <p class="text-sm text-gray-500 mt-1">${p.tribunal || ''} - ${p.vara || ''}</p>
                         </div>
-                        <h3 class="text-xl font-bold text-primary">${p.cliente}</h3>
-                        <p class="text-md text-gray-700">${p.numero}</p>
-                        <p class="text-sm text-gray-500 mt-1">${p.tribunal || ''} - ${p.vara || ''}</p>
-                    </div>
-                    <div class="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end pt-4 sm:pt-0 border-t sm:border-none border-gray-100">
-                        <select data-id="${p.id}" class="status-select text-sm border-gray-300 rounded-md">${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select>
-                        <button data-id="${p.id}" data-action="add-movimentacao" class="bg-primary text-white h-9 w-9 grid place-content-center rounded-full hover:opacity-90" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
-                        <button data-id="${p.id}" data-action="delete-process" class="bg-red-600 text-white h-9 w-9 grid place-content-center rounded-full hover:bg-red-700" title="Excluir Processo"><i class="fa fa-trash"></i></button>
+                        <div class="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end pt-4 sm:pt-0 sm:border-none border-t border-gray-100">
+                            <select data-id="${p.id}" class="status-select text-sm border-gray-300 rounded-md">${statusOptions.map(opt => `<option value="${opt}" ${p.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select>
+                            <button data-id="${p.id}" data-action="add-movimentacao" class="bg-primary text-white h-9 w-9 grid place-content-center rounded-full hover:opacity-90" title="Adicionar Movimentação"><i class="fa fa-plus"></i></button>
+                            <button data-id="${p.id}" data-action="delete-process" class="bg-red-600 text-white h-9 w-9 grid place-content-center rounded-full hover:bg-red-700" title="Excluir Processo"><i class="fa fa-trash"></i></button>
+                        </div>
                     </div>
                 </div>
-                <div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4><div class="space-y-2 text-sm">
-                    ${[...(p.movimentacoes || [])].reverse().slice(0, 3).map(m => `<div class="movimentacao-item ${m.concluido ? 'concluida' : ''} p-2 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100" data-action="edit-movimentacao" data-process-id="${p.id}" data-mov-id="${m.id}"><p class="text-gray-800 pointer-events-none">${m.descricao}</p><div class="flex justify-between items-center mt-1 pointer-events-none"><span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600">Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>` : ''}</div></div>`).join('') || '<p class="text-xs text-gray-500">Nenhuma movimentação registada.</p>'}
-                </div></div>`;
+                <div class="px-5 pb-5 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Últimas Movimentações</h4>
+                    <div class="space-y-2 text-sm">
+                        ${[...(p.movimentacoes || [])].reverse().slice(0, 3).map(m => `<div class="movimentacao-item ${m.concluido ? 'concluida' : ''} p-2 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100" data-action="edit-movimentacao" data-process-id="${p.id}" data-mov-id="${m.id}"><p class="text-gray-800 pointer-events-none">${m.descricao}</p><div class="flex justify-between items-center mt-1 pointer-events-none"><span class="text-xs text-gray-500">${new Date(m.timestamp).toLocaleString('pt-BR')}</span>${m.prazo_fatal ? `<span class="text-xs font-semibold text-red-600">Prazo: ${new Date(m.prazo_fatal).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>` : ''}</div></div>`).join('') || '<p class="text-xs text-gray-500">Nenhuma movimentação registada.</p>'}
+                    </div>
+                </div>`;
             listEl.appendChild(card);
         });
     };
