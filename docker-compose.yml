@@ -9,7 +9,8 @@ services:
     container_name: jmd_webapp
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - jmd-network
 
@@ -28,7 +29,7 @@ services:
     networks:
       - jmd-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,3 +61,4 @@ volumes:
 networks:
   jmd-network:
     driver: bridge
+
