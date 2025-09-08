@@ -46,38 +46,21 @@ const initializeDatabase = async () => {
                 status VARCHAR(100) DEFAULT 'Distribuído',
                 movimentacoes JSONB DEFAULT '[]',
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                proxima_audiencia_old DATE, -- Coluna antiga para migração
                 links JSONB DEFAULT '[]',
                 area_direito VARCHAR(100),
                 tribunal VARCHAR(255),
                 vara VARCHAR(255),
                 modo_audiencia VARCHAR(100),
-                link_audiencia VARCHAR(512)
+                link_audiencia VARCHAR(512),
+                proxima_audiencia TIMESTAMP WITH TIME ZONE
             );
         `);
         console.log('Tabela "processes" verificada/criada com sucesso.');
         
-        // Adiciona a nova coluna de timestamp se não existir
-        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS proxima_audiencia TIMESTAMP WITH TIME ZONE;");
+        // Adiciona a nova coluna se ela não existir
+        await client.query("ALTER TABLE processes ADD COLUMN IF NOT EXISTS link_tribunal VARCHAR(512);");
+        console.log('Coluna "link_tribunal" verificada/adicionada com sucesso.');
 
-        // Bloco de migração de dados: DATE -> TIMESTAMP WITH TIME ZONE
-        // Apenas para compatibilidade com dados existentes na V5
-        try {
-            // Copia dados da coluna antiga (DATE) para a nova (TIMESTAMP), se a antiga existir
-            await client.query(`
-                UPDATE processes 
-                SET proxima_audiencia = proxima_audiencia_old::TIMESTAMP 
-                WHERE proxima_audiencia_old IS NOT NULL AND proxima_audiencia IS NULL;
-            `);
-             // Remove a coluna antiga após a migração bem-sucedida
-            await client.query("ALTER TABLE processes DROP COLUMN IF EXISTS proxima_audiencia_old;");
-            console.log('Migração de data da audiência para timestamp concluída.');
-        } catch(e) {
-            // Ignora erros se a coluna antiga não existir, o que é esperado em novas instalações
-            if (!e.message.includes("column \"proxima_audiencia_old\" does not exist")) {
-                 console.error("Erro durante a migração da data de audiência (pode ser ignorado em novas instalações):", e.message);
-            }
-        }
 
     } catch (err) {
         console.error('Erro ao inicializar o banco de dados:', err);
@@ -88,6 +71,11 @@ const initializeDatabase = async () => {
 
 
 // --- ROTAS DA API ---
+
+// Rota para Health Check
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
 
 // Obter todos os processos com filtros
 app.get('/api/processes', async (req, res) => {
@@ -131,14 +119,14 @@ app.get('/api/processes', async (req, res) => {
 
 // Criar um novo processo
 app.post('/api/processes', async (req, res) => {
-    const { numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia } = req.body;
+    const { numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia, link_tribunal } = req.body;
     if (!numero || !cliente) {
         return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
     }
     try {
         const result = await pool.query(
-            'INSERT INTO processes (numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [numero, cliente, area_direito, tribunal, vara, proxima_audiencia || null, modo_audiencia, link_audiencia]
+            'INSERT INTO processes (numero, cliente, area_direito, tribunal, vara, proxima_audiencia, modo_audiencia, link_audiencia, link_tribunal) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [numero, cliente, area_direito, tribunal, vara, proxima_audiencia || null, modo_audiencia, link_audiencia, link_tribunal]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -150,14 +138,14 @@ app.post('/api/processes', async (req, res) => {
 // Atualizar informações de um processo
 app.put('/api/processes/:id', async (req, res) => {
     const { id } = req.params;
-    const { numero, cliente, proxima_audiencia, area_direito, tribunal, vara, modo_audiencia, link_audiencia } = req.body;
+    const { numero, cliente, proxima_audiencia, area_direito, tribunal, vara, modo_audiencia, link_audiencia, link_tribunal } = req.body;
      if (!numero || !cliente) {
         return res.status(400).json({ message: 'Número do processo e nome do cliente são obrigatórios.' });
     }
     try {
         const result = await pool.query(
-            'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, area_direito = $4, tribunal = $5, vara = $6, modo_audiencia = $7, link_audiencia = $8, last_updated = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *',
-            [numero, cliente, proxima_audiencia || null, area_direito, tribunal, vara, modo_audiencia, link_audiencia, id]
+            'UPDATE processes SET numero = $1, cliente = $2, proxima_audiencia = $3, area_direito = $4, tribunal = $5, vara = $6, modo_audiencia = $7, link_audiencia = $8, link_tribunal = $9, last_updated = CURRENT_TIMESTAMP WHERE id = $10 RETURNING *',
+            [numero, cliente, proxima_audiencia || null, area_direito, tribunal, vara, modo_audiencia, link_audiencia, link_tribunal, id]
         );
         if (result.rowCount === 0) return res.status(404).json({ message: 'Processo não encontrado.' });
         res.json(result.rows[0]);
